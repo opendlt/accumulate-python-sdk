@@ -1,0 +1,46 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+env/
+venv/
+
+# Packaging
+*.egg-info/
+*.egg
+dist/
+build/
+
+# Test & lint caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project-specific ignores
+# Generated SDK output
+src/accumulate_client/__pycache__/
+unified/.pytest_cache/
+unified/.ruff_cache/
+unified/.venv/
+
+# Local keys (example keys)
+examples/.keys/
+
+# Local Claude settings
+.claude/
+
+# Binary / exe artifacts
+*.exe
