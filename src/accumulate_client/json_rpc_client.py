@@ -2,12 +2,11 @@
 
 """JSON-RPC 2.0 client implementation"""
 
-import asyncio
 import json
 import random
 from typing import Any, Dict, List, Optional, Union
 
-import aiohttp
+import requests
 
 
 class JsonRpcException(Exception):
@@ -36,16 +35,9 @@ class JsonRpcClient:
         """
         self._server_url = server_url
         self._timeout = timeout or 30.0
-        self._session: Optional[aiohttp.ClientSession] = None
+        self._session = requests.Session()
 
-    async def _get_session(self) -> aiohttp.ClientSession:
-        """Get or create the HTTP session"""
-        if self._session is None or self._session.closed:
-            timeout = aiohttp.ClientTimeout(total=self._timeout)
-            self._session = aiohttp.ClientSession(timeout=timeout)
-        return self._session
-
-    async def call(self, method: str, params: Any = None) -> Any:
+    def call(self, method: str, params: Any = None) -> Any:
         """Make a JSON-RPC call
 
         Args:
@@ -67,21 +59,21 @@ class JsonRpcClient:
         if params is not None:
             request_data["params"] = params
 
-        session = await self._get_session()
         try:
-            async with session.post(
+            response = self._session.post(
                 self._server_url,
                 json=request_data,
                 headers={"Content-Type": "application/json"},
-            ) as response:
-                if response.status != 200:
-                    raise JsonRpcException(
-                        f"HTTP {response.status}: {response.reason}",
-                        code=response.status,
-                    )
+                timeout=self._timeout,
+            )
+            if response.status_code != 200:
+                raise JsonRpcException(
+                    f"HTTP {response.status_code}: {response.reason}",
+                    code=response.status_code,
+                )
 
-                response_data = await response.json()
-        except aiohttp.ClientError as e:
+            response_data = response.json()
+        except requests.exceptions.RequestException as e:
             raise JsonRpcException(f"HTTP request failed: {e}")
         except json.JSONDecodeError as e:
             raise JsonRpcException(f"Invalid JSON response: {e}")
@@ -96,11 +88,11 @@ class JsonRpcClient:
 
         return response_data.get("result")
 
-    async def batch(self, requests: List[Dict[str, Any]]) -> List[Any]:
+    def batch(self, requests_list: List[Dict[str, Any]]) -> List[Any]:
         """Make a batch JSON-RPC call
 
         Args:
-            requests: List of request dictionaries with 'method' and optional 'params'
+            requests_list: List of request dictionaries with 'method' and optional 'params'
 
         Returns:
             List of results from the RPC calls
@@ -109,7 +101,7 @@ class JsonRpcClient:
             JsonRpcException: If any RPC call fails
         """
         batch_request = []
-        for i, req in enumerate(requests):
+        for i, req in enumerate(requests_list):
             request_data = {
                 "jsonrpc": "2.0",
                 "method": req["method"],
@@ -119,21 +111,21 @@ class JsonRpcClient:
                 request_data["params"] = req["params"]
             batch_request.append(request_data)
 
-        session = await self._get_session()
         try:
-            async with session.post(
+            response = self._session.post(
                 self._server_url,
                 json=batch_request,
                 headers={"Content-Type": "application/json"},
-            ) as response:
-                if response.status != 200:
-                    raise JsonRpcException(
-                        f"HTTP {response.status}: {response.reason}",
-                        code=response.status,
-                    )
+                timeout=self._timeout,
+            )
+            if response.status_code != 200:
+                raise JsonRpcException(
+                    f"HTTP {response.status_code}: {response.reason}",
+                    code=response.status_code,
+                )
 
-                response_data = await response.json()
-        except aiohttp.ClientError as e:
+            response_data = response.json()
+        except requests.exceptions.RequestException as e:
             raise JsonRpcException(f"HTTP request failed: {e}")
         except json.JSONDecodeError as e:
             raise JsonRpcException(f"Invalid JSON response: {e}")
@@ -151,13 +143,12 @@ class JsonRpcClient:
 
         return results
 
-    async def close(self) -> None:
+    def close(self) -> None:
         """Close the HTTP session"""
-        if self._session and not self._session.closed:
-            await self._session.close()
+        self._session.close()
 
-    async def __aenter__(self):
+    def __enter__(self):
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.close()
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
