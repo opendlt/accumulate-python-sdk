@@ -1,0 +1,3 @@
+include src/accumulate_client/py.typed
+include README.md
+include LICENSE

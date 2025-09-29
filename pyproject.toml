@@ -1,74 +1,72 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=68", "wheel", "build"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "accumulate-client"
-version = "1.0.0"
-description = "Python client for Accumulate blockchain JSON-RPC API "
-readme = "README.md"
-license = {file = "LICENSE"}
+dynamic = ["version", "readme"]
+description = "Accumulate Python SDK (V2/V3 unified) with DevNet-first flows"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
 authors = [
-    {name = "Accumulate Foundation", email = "support@accumulatenetwork.io"},
+    { name = "OpenDLT", email = "dev@opendlt.dev" }
 ]
-keywords = ["blockchain", "accumulate", "jsonrpc", "client"]
+keywords = ["blockchain", "accumulate", "jsonrpc", "client", "devnet", "crypto"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
     "Topic :: Office/Business :: Financial",
+    "Topic :: Security :: Cryptography",
 ]
-requires-python = ">=3.8"
 dependencies = [
-    "requests>=2.25.0",
-    "cryptography>=3.4.0",
-    "typing-extensions>=4.0.0;python_version<'3.10'",
+    "requests>=2.32",
+    "cryptography>=42",
+    "typing-extensions>=4.8; python_version<'3.11'"
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0.0",
-    "ruff>=0.1.0",
-    "mypy>=1.0.0",
+    "pytest", "coverage", "mypy", "ruff", "pdoc", "build", "twine", "genbadge[coverage]"
 ]
 
 [project.urls]
-Homepage = "https://accumulatenetwork.io"
-Documentation = "https://docs.accumulatenetwork.io"
-Repository = "https://github.com/AccumulateNetwork/accumulate"
-"Bug Tracker" = "https://github.com/AccumulateNetwork/accumulate/issues"
+Homepage = "https://github.com/opendlt/accumulate-python"
+Documentation = "https://github.com/opendlt/accumulate-python#readme"
+Issues = "https://github.com/opendlt/accumulate-python/issues"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/accumulate_client"]
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.dynamic]
+version = { attr = "accumulate_client._version.__version__" }
+readme = { file = "README.md", content-type = "text/markdown" }
 
 [tool.ruff]
 line-length = 100
-target-version = "py38"
+target-version = "py39"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "C90", "I", "N", "UP", "B", "A", "C4", "T20"]
-ignore = ["E501"]
+preview = true
+extend-select = ["I", "UP", "B", "C4", "SIM", "RUF"]
+extend-ignore = ["E203"]
 
 [tool.mypy]
-python_version = "3.8"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-warn_redundant_casts = true
+python_version = "3.9"
 warn_unused_ignores = true
-warn_no_return = true
-warn_unreachable = true
-strict_equality = true
+warn_redundant_casts = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+check_untyped_defs = true
+strict_optional = true
+ignore_missing_imports = true
