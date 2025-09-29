@@ -5,7 +5,61 @@
 import os
 import sys
 import time
+import requests
+
+# Add parent directory to path for relative imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from accumulate_client import AccumulateClient
+
+
+def load_env_config():
+    """Load DevNet configuration from environment or .env.local"""
+    config = {
+        'ACC_RPC_URL_V2': os.environ.get('ACC_RPC_URL_V2', 'http://localhost:26660/v2'),
+        'ACC_RPC_URL_V3': os.environ.get('ACC_RPC_URL_V3', 'http://localhost:26660/v3'),
+        'ACC_FAUCET_ACCOUNT': os.environ.get('ACC_FAUCET_ACCOUNT', ''),
+        'ACC_DEVNET_DIR': os.environ.get('ACC_DEVNET_DIR', '')
+    }
+
+    # Try to load from .env.local
+    env_local_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env.local')
+    if os.path.exists(env_local_path):
+        with open(env_local_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    if key in config and not os.environ.get(key):
+                        config[key] = value
+
+    return config
+
+
+def test_devnet_connectivity(config):
+    """Test DevNet connectivity and fail fast if down"""
+    print("Testing DevNet connectivity...")
+
+    try:
+        # Test V3 endpoint
+        response = requests.post(
+            config['ACC_RPC_URL_V3'],
+            json={"jsonrpc":"2.0","method":"network-status","params":{},"id":1},
+            timeout=5
+        )
+        if response.status_code == 200:
+            result = response.json()
+            if 'result' in result:
+                network_name = result['result'].get('network', {}).get('networkName', 'Unknown')
+                print(f"[OK] DevNet connected: {network_name}")
+            else:
+                raise Exception("Invalid V3 response")
+        else:
+            raise Exception(f"V3 endpoint returned {response.status_code}")
+    except Exception as e:
+        print(f"[ERROR] DevNet connection failed: {e}")
+        print("Please ensure DevNet is running and run: python tool/devnet_discovery.py")
+        sys.exit(1)
 
 
 def load_urls():
@@ -30,14 +84,17 @@ def main():
     """Main example function"""
     print("=== Fund LTA using Local DevNet Faucet ===")
 
-    # Load environment variables (set by devnet_discovery.py)
-    v2_url = os.environ.get('ACC_RPC_URL_V2', 'http://localhost:26660/v2')
-    v3_url = os.environ.get('ACC_RPC_URL_V3', 'http://localhost:26660/v3')
-    faucet_account = os.environ.get('ACC_FAUCET_ACCOUNT', 'acc://a21555da824d14f3f066214657a44e6a1a347dad3052a23a/ACME')
+    # Load and display DevNet configuration
+    config = load_env_config()
+    print(f"\nDevNet Endpoints:")
+    print(f"  V2 API: {config['ACC_RPC_URL_V2']}")
+    print(f"  V3 API: {config['ACC_RPC_URL_V3']}")
+    if config['ACC_FAUCET_ACCOUNT']:
+        print(f"  Faucet: {config['ACC_FAUCET_ACCOUNT']}")
+    print()
 
-    print(f"Using V2 endpoint: {v2_url}")
-    print(f"Using V3 endpoint: {v3_url}")
-    print(f"Using faucet account: {faucet_account}")
+    # Test connectivity and fail fast
+    test_devnet_connectivity(config)
 
     # Load URLs from previous example
     urls = load_urls()
@@ -45,8 +102,8 @@ def main():
     print(f"Target LTA: {lta}")
 
     # Create clients
-    v2_client = AccumulateClient(v2_url)
-    v3_client = AccumulateClient(v3_url)
+    v2_client = AccumulateClient(config['ACC_RPC_URL_V2'])
+    v3_client = AccumulateClient(config['ACC_RPC_URL_V3'])
 
     try:
         # Check initial balance

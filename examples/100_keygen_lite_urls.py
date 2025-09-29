@@ -2,10 +2,42 @@
 
 """Generate Ed25519 keypair and derive Lite Identity + Token Account URLs"""
 
-import hashlib
 import os
+import sys
+
+# Add parent directory to path for relative imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from tests.helpers.crypto_helpers import (
+    derive_lite_identity_url,
+    derive_lite_token_account_url,
+    ed25519_keypair_from_seed
+)
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
+
+
+def load_env_config():
+    """Load DevNet configuration from environment or .env.local"""
+    config = {
+        'ACC_RPC_URL_V2': os.environ.get('ACC_RPC_URL_V2', 'http://localhost:26660/v2'),
+        'ACC_RPC_URL_V3': os.environ.get('ACC_RPC_URL_V3', 'http://localhost:26660/v3'),
+        'ACC_FAUCET_ACCOUNT': os.environ.get('ACC_FAUCET_ACCOUNT', ''),
+        'ACC_DEVNET_DIR': os.environ.get('ACC_DEVNET_DIR', '')
+    }
+
+    # Try to load from .env.local
+    env_local_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env.local')
+    if os.path.exists(env_local_path):
+        with open(env_local_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    if key in config and not os.environ.get(key):
+                        config[key] = value
+
+    return config
 
 
 def bytes_to_hex(data: bytes) -> str:
@@ -13,35 +45,18 @@ def bytes_to_hex(data: bytes) -> str:
     return data.hex()
 
 
-def derive_lite_identity_url(public_key_bytes: bytes) -> str:
-    """Derive Lite Identity URL from Ed25519 public key with checksum"""
-    # For Ed25519: keyHash = SHA256(publicKey) - Go: protocol/protocol.go:290
-    key_hash_full = hashlib.sha256(public_key_bytes).digest()
-
-    # Use first 20 bytes - Go: protocol/protocol.go:274
-    key_hash_20 = key_hash_full[:20]
-
-    # Convert to hex string - Go: protocol/protocol.go:274
-    key_str = key_hash_20.hex()
-
-    # Calculate checksum - Go: protocol/protocol.go:275-276
-    checksum_full = hashlib.sha256(key_str.encode('utf-8')).digest()
-    checksum = checksum_full[28:].hex()  # Take last 4 bytes
-
-    # Format: acc://<keyHash[0:20]><checksum> - Go: protocol/protocol.go:277
-    return f"acc://{key_str}{checksum}"
-
-
-def derive_lite_token_account_url(public_key_bytes: bytes, token="ACME") -> str:
-    """Derive Lite Token Account URL for ACME"""
-    # LTA = LID + "/ACME" path - Go: protocol/protocol.go:267-268
-    lid = derive_lite_identity_url(public_key_bytes)
-    return f"{lid}/{token}"
-
-
 def main():
     """Main example function"""
     print("=== Accumulate Key Generation & Lite URL Derivation ===")
+
+    # Load and display DevNet configuration
+    config = load_env_config()
+    print(f"\nDevNet Endpoints:")
+    print(f"  V2 API: {config['ACC_RPC_URL_V2']}")
+    print(f"  V3 API: {config['ACC_RPC_URL_V3']}")
+    if config['ACC_FAUCET_ACCOUNT']:
+        print(f"  Faucet: {config['ACC_FAUCET_ACCOUNT']}")
+    print()
 
     # Generate new Ed25519 key pair
     print("Generating Ed25519 key pair...")
@@ -63,7 +78,7 @@ def main():
     print(f"Private Key: {bytes_to_hex(private_key_bytes)}")
     print(f"Public Key: {bytes_to_hex(public_key_bytes)}")
 
-    # Derive Lite Identity URL
+    # Derive Lite Identity URL using crypto helpers
     lid = derive_lite_identity_url(public_key_bytes)
     print(f"Lite Identity (LID): {lid}")
 
