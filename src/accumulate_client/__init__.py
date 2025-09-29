@@ -10,12 +10,16 @@ from .codec import BinaryWriter, BinaryReader, TransactionCodec, sha256_bytes
 # Canonical JSON for cross-language hash stability
 from .canonjson import dumps_canonical
 
+# Ed25519 cryptography for signatures
+from .crypto import Ed25519KeyPair
+
 __all__ = [
     'AccumulateClient',
     'BinaryWriter',
     'BinaryReader',
     'TransactionCodec',
     'sha256_bytes',
-    'dumps_canonical'
+    'dumps_canonical',
+    'Ed25519KeyPair'
 ]
 __version__ = '0.1.0'
