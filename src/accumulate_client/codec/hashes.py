@@ -7,7 +7,8 @@ Transaction hashing follows discovered rules from Go/TypeScript.
 """
 
 import hashlib
-from typing import Dict, Any
+from typing import Any, Dict
+
 from ..canonjson import dumps_canonical
 
 
@@ -60,6 +61,7 @@ def hash_transaction(header: Dict[str, Any], body: Dict[str, Any]) -> bytes:
     """
     # Import here to avoid circular imports
     from .transaction_codec import TransactionCodec
+
     return TransactionCodec.encode_tx_for_signing(header, body)
 
 
@@ -73,7 +75,7 @@ def hash_signature_metadata(signature_metadata: Dict[str, Any]) -> bytes:
     Returns:
         Signature metadata hash (32 bytes)
     """
-    metadata_json = dumps_canonical(signature_metadata).encode('utf-8')
+    metadata_json = dumps_canonical(signature_metadata).encode("utf-8")
     return sha256_bytes(metadata_json)
 
 
@@ -93,4 +95,5 @@ def create_signing_preimage(signature_metadata_hash: bytes, transaction_hash: by
     """
     # Import here to avoid circular imports
     from .transaction_codec import TransactionCodec
+
     return TransactionCodec.create_signing_preimage(signature_metadata_hash, transaction_hash)

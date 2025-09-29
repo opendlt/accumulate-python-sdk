@@ -6,12 +6,10 @@ Follows discovered rules from Go/TypeScript implementations.
 """
 
 import json
-from typing import Dict, Any
+from typing import Any, Dict, Optional
 
 from .hashes import sha256_bytes
 from .writer import BinaryWriter
-from .reader import BinaryReader
-from ..canonjson import dumps_canonical
 
 
 class AccumulateCodec:
@@ -48,7 +46,7 @@ class AccumulateCodec:
         return writer.to_bytes()
 
     @staticmethod
-    def uvarint_marshal_binary(val: int, field: int = None) -> bytes:
+    def uvarint_marshal_binary(val: int, field: Optional[int] = None) -> bytes:
         """
         Encode unsigned varint (ULEB128).
 
@@ -76,7 +74,7 @@ class AccumulateCodec:
         return data
 
     @staticmethod
-    def varint_marshal_binary(val: int, field: int = None) -> bytes:
+    def varint_marshal_binary(val: int, field: Optional[int] = None) -> bytes:
         """
         Encode signed varint (zigzag encoding).
 
@@ -96,7 +94,7 @@ class AccumulateCodec:
         return AccumulateCodec.uvarint_marshal_binary(ux, field)
 
     @staticmethod
-    def boolean_marshal_binary(b: bool, field: int = None) -> bytes:
+    def boolean_marshal_binary(b: bool, field: Optional[int] = None) -> bytes:
         """
         Encode boolean.
 
@@ -115,7 +113,7 @@ class AccumulateCodec:
         return data
 
     @staticmethod
-    def string_marshal_binary(val: str, field: int = None) -> bytes:
+    def string_marshal_binary(val: str, field: Optional[int] = None) -> bytes:
         """
         Encode string (UTF-8, length-prefixed).
 
@@ -128,13 +126,13 @@ class AccumulateCodec:
         Returns:
             Encoded string with length prefix
         """
-        data = AccumulateCodec.bytes_marshal_binary(val.encode('utf-8'))
+        data = AccumulateCodec.bytes_marshal_binary(val.encode("utf-8"))
         if field is not None:
             return AccumulateCodec.field_marshal_binary(field, data)
         return data
 
     @staticmethod
-    def bytes_marshal_binary(val: bytes, field: int = None) -> bytes:
+    def bytes_marshal_binary(val: bytes, field: Optional[int] = None) -> bytes:
         """
         Encode bytes (length-prefixed).
 
@@ -156,7 +154,7 @@ class AccumulateCodec:
         return data
 
     @staticmethod
-    def hash_marshal_binary(val: bytes, field: int = None) -> bytes:
+    def hash_marshal_binary(val: bytes, field: Optional[int] = None) -> bytes:
         """
         Encode hash (32 bytes, no length prefix).
 
@@ -180,7 +178,7 @@ class AccumulateCodec:
         return val
 
     @staticmethod
-    def bigint_marshal_binary(bn: int, field: int = None) -> bytes:
+    def bigint_marshal_binary(bn: int, field: Optional[int] = None) -> bytes:
         """
         Encode BigInt (as big-endian bytes, length-prefixed).
 
@@ -242,8 +240,8 @@ class TransactionCodec:
         """
         # Encode header and body to canonical binary format exactly as Dart TransactionCodec
         # Dart uses jsonEncode() which should match our canonical JSON, but let's be explicit
-        header_json = json.dumps(header, separators=(',', ':'), sort_keys=True).encode('utf-8')
-        body_json = json.dumps(body, separators=(',', ':'), sort_keys=True).encode('utf-8')
+        header_json = json.dumps(header, separators=(",", ":"), sort_keys=True).encode("utf-8")
+        body_json = json.dumps(body, separators=(",", ":"), sort_keys=True).encode("utf-8")
 
         header_bytes = AccumulateCodec.bytes_marshal_binary(header_json)
         body_bytes = AccumulateCodec.bytes_marshal_binary(body_json)

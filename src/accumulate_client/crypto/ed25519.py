@@ -7,8 +7,9 @@ Uses pure Ed25519 (not Ed25519ph) for signature compatibility.
 
 import hashlib
 from typing import Tuple
-from cryptography.hazmat.primitives.asymmetric import ed25519
+
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ed25519
 
 
 class Ed25519KeyPair:
@@ -37,7 +38,7 @@ class Ed25519KeyPair:
         self._public_key = private_key.public_key()
 
     @classmethod
-    def generate(cls) -> 'Ed25519KeyPair':
+    def generate(cls) -> "Ed25519KeyPair":
         """
         Generate a new Ed25519 key pair.
 
@@ -50,7 +51,7 @@ class Ed25519KeyPair:
         return cls(private_key)
 
     @classmethod
-    def from_seed(cls, seed32: bytes) -> 'Ed25519KeyPair':
+    def from_seed(cls, seed32: bytes) -> "Ed25519KeyPair":
         """
         Create key pair from 32-byte seed.
 
@@ -81,8 +82,7 @@ class Ed25519KeyPair:
             32-byte public key
         """
         return self._public_key.public_bytes(
-            encoding=serialization.Encoding.Raw,
-            format=serialization.PublicFormat.Raw
+            encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw
         )
 
     def private_key_bytes(self) -> bytes:
@@ -95,7 +95,7 @@ class Ed25519KeyPair:
         return self._private_key.private_bytes(
             encoding=serialization.Encoding.Raw,
             format=serialization.PrivateFormat.Raw,
-            encryption_algorithm=serialization.NoEncryption()
+            encryption_algorithm=serialization.NoEncryption(),
         )
 
     def sign(self, msg: bytes) -> bytes:
@@ -157,7 +157,7 @@ class Ed25519KeyPair:
         key_str = key_hash_20.hex()
 
         # Calculate checksum - Go: protocol/protocol.go:275-276
-        checksum_full = hashlib.sha256(key_str.encode('utf-8')).digest()
+        checksum_full = hashlib.sha256(key_str.encode("utf-8")).digest()
         checksum = checksum_full[28:].hex()  # Take last 4 bytes
 
         # Format: acc://<keyHash[0:20]><checksum> - Go: protocol/protocol.go:277

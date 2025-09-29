@@ -5,6 +5,7 @@ Implements exact binary encoding semantics matching Dart BinaryWriter class.
 Provides primitive encoding with same endianness, varint format, and byte handling.
 """
 
+import builtins
 import struct
 from typing import List
 
@@ -17,7 +18,7 @@ class BinaryWriter:
     Maintains same method names, signatures, and binary output format.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize writer with empty byte buffer."""
         self._bb: List[int] = []
 
@@ -42,7 +43,7 @@ class BinaryWriter:
             v: Integer value to write as 32-bit little-endian
         """
         # Pack as little-endian uint32, extend to match Dart behavior
-        packed = struct.pack('<I', v & 0xFFFFFFFF)
+        packed = struct.pack("<I", v & 0xFFFFFFFF)
         self._bb.extend(packed)
 
     def u64le(self, v: int) -> None:
@@ -55,10 +56,10 @@ class BinaryWriter:
             v: Integer value to write as 64-bit little-endian
         """
         # Pack as little-endian uint64, mask to match Dart behavior
-        packed = struct.pack('<Q', v & 0xFFFFFFFFFFFFFFFF)
+        packed = struct.pack("<Q", v & 0xFFFFFFFFFFFFFFFF)
         self._bb.extend(packed)
 
-    def bytes(self, v: bytes) -> None:
+    def bytes(self, v: builtins.bytes) -> None:
         """
         Write raw bytes without length prefix.
 
@@ -69,7 +70,7 @@ class BinaryWriter:
         """
         self._bb.extend(v)
 
-    def len_prefixed_bytes(self, v: bytes) -> None:
+    def len_prefixed_bytes(self, v: builtins.bytes) -> None:
         """
         Write bytes with length prefix using uvarint.
 
@@ -111,7 +112,7 @@ class BinaryWriter:
             x >>= 7
         self.u8(x)
 
-    def to_bytes(self) -> bytes:
+    def to_bytes(self) -> builtins.bytes:
         """
         Return accumulated bytes as immutable bytes object.
 

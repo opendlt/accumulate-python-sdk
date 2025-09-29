@@ -5,6 +5,7 @@ Implements exact binary decoding semantics matching Dart BinaryReader class.
 Provides primitive decoding with same endianness, varint format, and byte handling.
 """
 
+import builtins
 import struct
 
 
@@ -16,7 +17,7 @@ class BinaryReader:
     Maintains same method names, signatures, and binary parsing behavior.
     """
 
-    def __init__(self, buf: bytes):
+    def __init__(self, buf: builtins.bytes):
         """
         Initialize reader with byte buffer.
 
@@ -67,7 +68,7 @@ class BinaryReader:
         if self._off + 4 > len(self._buf):
             raise IndexError("Buffer overflow: attempting to read u32le beyond end")
         # Use struct.unpack to match Dart ByteData.getUint32(0, Endian.little)
-        val = struct.unpack('<I', self._buf[self._off:self._off + 4])[0]
+        val = struct.unpack("<I", self._buf[self._off : self._off + 4])[0]
         self._off += 4
         return val
 
@@ -83,7 +84,7 @@ class BinaryReader:
         if self._off + 8 > len(self._buf):
             raise IndexError("Buffer overflow: attempting to read u64le beyond end")
         # Use struct.unpack to match Dart ByteData.getUint64(0, Endian.little)
-        val = struct.unpack('<Q', self._buf[self._off:self._off + 8])[0]
+        val = struct.unpack("<Q", self._buf[self._off : self._off + 8])[0]
         self._off += 8
         return val
 
@@ -104,13 +105,13 @@ class BinaryReader:
                 raise IndexError("Buffer overflow: attempting to read varint beyond end")
             b = self.u8()
             if b < 0x80:
-                x |= (b << s)
+                x |= b << s
                 break
-            x |= ((b & 0x7F) << s)
+            x |= (b & 0x7F) << s
             s += 7
         return x
 
-    def bytes(self, n: int) -> bytes:
+    def bytes(self, n: int) -> builtins.bytes:
         """
         Read n bytes from buffer.
 
@@ -125,11 +126,11 @@ class BinaryReader:
         if self._off + n > len(self._buf):
             raise IndexError(f"Buffer overflow: attempting to read {n} bytes beyond end")
         # Use slice to match Dart Uint8List.sublistView behavior
-        out = self._buf[self._off:self._off + n]
+        out = self._buf[self._off : self._off + n]
         self._off += n
         return out
 
-    def len_prefixed_bytes(self) -> bytes:
+    def len_prefixed_bytes(self) -> builtins.bytes:
         """
         Read bytes with length prefix using uvarint.
 
@@ -152,4 +153,4 @@ class BinaryReader:
         """
         b = self.len_prefixed_bytes()
         # Use String.fromCharCodes equivalent - decode as ASCII
-        return ''.join(chr(byte) for byte in b)
+        return "".join(chr(byte) for byte in b)

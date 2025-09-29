@@ -7,7 +7,7 @@ are stable across languages.
 """
 
 import json
-from typing import Any, Dict, List, Union
+from typing import Any
 
 
 def dumps_canonical(obj: Any) -> str:
@@ -26,7 +26,7 @@ def dumps_canonical(obj: Any) -> str:
     Returns:
         Canonical JSON string with sorted keys and no extra whitespace
     """
-    return json.dumps(_canonicalize(obj), separators=(',', ':'), ensure_ascii=False, sort_keys=True)
+    return json.dumps(_canonicalize(obj), separators=(",", ":"), ensure_ascii=False, sort_keys=True)
 
 
 def _canonicalize(v: Any) -> Any:
