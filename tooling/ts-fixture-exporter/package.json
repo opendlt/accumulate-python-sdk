@@ -1,0 +1,13 @@
+{
+  "name": "ts-fixture-exporter",
+  "version": "1.0.0",
+  "description": "Export golden test fixtures from TypeScript SDK",
+  "main": "export-fixtures.js",
+  "type": "module",
+  "scripts": {
+    "export": "node export-fixtures.js"
+  },
+  "dependencies": {
+    "tweetnacl": "^1.0.3"
+  }
+}
