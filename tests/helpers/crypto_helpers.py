@@ -8,10 +8,10 @@ to match TypeScript SDK behavior exactly.
 """
 
 import hashlib
-import json
 from typing import Any, Dict, Union
-from cryptography.hazmat.primitives.asymmetric import ed25519
+
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ed25519
 
 
 def canonical_json(obj: Any) -> str:
@@ -28,6 +28,7 @@ def canonical_json(obj: Any) -> str:
     """
     # Import here to avoid circular imports
     from src.accumulate_client.canonjson import dumps_canonical
+
     return dumps_canonical(obj)
 
 
@@ -42,7 +43,7 @@ def sha256_hash(data: Union[str, bytes]) -> bytes:
         SHA-256 hash as bytes
     """
     if isinstance(data, str):
-        data = data.encode('utf-8')
+        data = data.encode("utf-8")
     return hashlib.sha256(data).digest()
 
 
@@ -140,12 +141,11 @@ def ed25519_keypair_from_seed(seed: bytes) -> tuple[bytes, bytes]:
     private_key_bytes = private_key.private_bytes(
         encoding=serialization.Encoding.Raw,
         format=serialization.PrivateFormat.Raw,
-        encryption_algorithm=serialization.NoEncryption()
+        encryption_algorithm=serialization.NoEncryption(),
     )
 
     public_key_bytes = public_key.public_bytes(
-        encoding=serialization.Encoding.Raw,
-        format=serialization.PublicFormat.Raw
+        encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw
     )
 
     return private_key_bytes, public_key_bytes
@@ -167,9 +167,7 @@ def create_transaction_hash(transaction: Dict[str, Any]) -> bytes:
 
 
 def create_signature_envelope(
-    transaction: Dict[str, Any],
-    private_key_bytes: bytes,
-    signature_type: str = "ed25519"
+    transaction: Dict[str, Any], private_key_bytes: bytes, signature_type: str = "ed25519"
 ) -> Dict[str, Any]:
     """
     Create a complete signature envelope for a transaction.
@@ -198,9 +196,9 @@ def create_signature_envelope(
             {
                 "type": signature_type,
                 "publicKey": public_key_bytes.hex(),
-                "signature": signature.hex()
+                "signature": signature.hex(),
             }
-        ]
+        ],
     }
 
     return envelope

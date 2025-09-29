@@ -2,12 +2,12 @@
 
 """Edge case tests for transaction_codec.py to achieve ≥90% coverage"""
 
-import pytest
 import json
-from typing import Dict, Any
 
-from accumulate_client.codec.transaction_codec import AccumulateCodec, TransactionCodec
+import pytest
+
 from accumulate_client.codec.hashes import sha256_bytes
+from accumulate_client.codec.transaction_codec import AccumulateCodec, TransactionCodec
 
 
 class TestAccumulateCodecEdgeCases:
@@ -79,11 +79,15 @@ class TestAccumulateCodecEdgeCases:
     def test_uvarint_marshal_binary_overflow(self):
         """Test uvarint_marshal_binary with values exceeding safe integer range"""
         # Test value exceeding MAX_SAFE_INTEGER
-        with pytest.raises(ValueError, match="Cannot marshal binary number greater than MAX_SAFE_INTEGER"):
+        with pytest.raises(
+            ValueError, match="Cannot marshal binary number greater than MAX_SAFE_INTEGER"
+        ):
             AccumulateCodec.uvarint_marshal_binary(0x7FFFFFFFFFFFFFFF + 1)
 
         # Test very large value
-        with pytest.raises(ValueError, match="Cannot marshal binary number greater than MAX_SAFE_INTEGER"):
+        with pytest.raises(
+            ValueError, match="Cannot marshal binary number greater than MAX_SAFE_INTEGER"
+        ):
             AccumulateCodec.uvarint_marshal_binary(2**64)
 
     def test_varint_marshal_binary_signed_values(self):
@@ -120,12 +124,12 @@ class TestAccumulateCodecEdgeCases:
         # Test true
         result_true = AccumulateCodec.boolean_marshal_binary(True)
         assert len(result_true) == 1
-        assert result_true == b'\x01'
+        assert result_true == b"\x01"
 
         # Test false
         result_false = AccumulateCodec.boolean_marshal_binary(False)
         assert len(result_false) == 1
-        assert result_false == b'\x00'
+        assert result_false == b"\x00"
 
     def test_boolean_marshal_binary_with_field(self):
         """Test boolean_marshal_binary with field numbers"""
@@ -166,7 +170,7 @@ class TestAccumulateCodecEdgeCases:
 
         # Test with field
         result = AccumulateCodec.string_marshal_binary(test_string, field=7)
-        assert len(result) > len(test_string.encode('utf-8'))
+        assert len(result) > len(test_string.encode("utf-8"))
 
         # Test without field
         result_no_field = AccumulateCodec.string_marshal_binary(test_string)
@@ -217,7 +221,7 @@ class TestAccumulateCodecEdgeCases:
         assert result == zero_hash
 
         # Test with all 0xFF
-        max_hash = b"\xFF" * 32
+        max_hash = b"\xff" * 32
         result = AccumulateCodec.hash_marshal_binary(max_hash)
         assert result == max_hash
 
@@ -290,7 +294,7 @@ class TestAccumulateCodecEdgeCases:
             AccumulateCodec.bigint_marshal_binary(-42)
 
         with pytest.raises(ValueError, match="Cannot marshal a negative bigint"):
-            AccumulateCodec.bigint_marshal_binary(-2**64)
+            AccumulateCodec.bigint_marshal_binary(-(2**64))
 
     def test_bigint_marshal_binary_hex_conversion(self):
         """Test bigint_marshal_binary hex conversion edge cases"""
@@ -344,22 +348,14 @@ class TestTransactionCodecEdgeCases:
             "principal": "acc://complex/test",
             "timestamp": 1234567890,
             "nonce": [1, 2, 3],
-            "metadata": {
-                "version": "2.0",
-                "flags": {"debug": True, "test": False}
-            }
+            "metadata": {"version": "2.0", "flags": {"debug": True, "test": False}},
         }
 
         body = {
             "type": "createIdentity",
             "url": "acc://new-identity",
-            "keybook": {
-                "pages": [
-                    {"keys": ["key1", "key2"]},
-                    {"keys": ["key3"]}
-                ]
-            },
-            "authorities": ["acc://auth1", "acc://auth2"]
+            "keybook": {"pages": [{"keys": ["key1", "key2"]}, {"keys": ["key3"]}]},
+            "authorities": ["acc://auth1", "acc://auth2"],
         }
 
         result = TransactionCodec.encode_tx_for_signing(header, body)
@@ -370,13 +366,13 @@ class TestTransactionCodecEdgeCases:
         header = {
             "principal": "acc://测试",
             "timestamp": 1234567890,
-            "memo": "Unicode test: 🌍🚀✨"
+            "memo": "Unicode test: 🌍🚀✨",
         }
 
         body = {
             "type": "writeData",
             "data": "Hello, 世界! 🎉",
-            "description": "Testing UTF-8: àáâãäåæçèéêë"
+            "description": "Testing UTF-8: àáâãäåæçèéêë",
         }
 
         result = TransactionCodec.encode_tx_for_signing(header, body)
@@ -388,14 +384,14 @@ class TestTransactionCodecEdgeCases:
         header = {
             "principal": "acc://large-test",
             "timestamp": 1234567890,
-            "large_field": "x" * 10000
+            "large_field": "x" * 10000,
         }
 
         # Create large body
         body = {
             "type": "writeData",
             "data": "y" * 50000,
-            "recipients": [f"acc://recipient-{i}" for i in range(1000)]
+            "recipients": [f"acc://recipient-{i}" for i in range(1000)],
         }
 
         result = TransactionCodec.encode_tx_for_signing(header, body)
@@ -435,7 +431,7 @@ class TestTransactionCodecEdgeCases:
         assert len(result) == 32
 
         # All 0xFF
-        max_hash = b"\xFF" * 32
+        max_hash = b"\xff" * 32
         result = TransactionCodec.create_signing_preimage(max_hash, max_hash)
         assert len(result) == 32
 
@@ -462,16 +458,12 @@ class TestTransactionCodecEdgeCases:
     def test_integration_full_transaction_flow(self):
         """Test integration of both encoding and signing preimage creation"""
         # Step 1: Create transaction
-        header = {
-            "principal": "acc://alice/ACME",
-            "timestamp": 1234567890,
-            "nonce": 1
-        }
+        header = {"principal": "acc://alice/ACME", "timestamp": 1234567890, "nonce": 1}
 
         body = {
             "type": "sendTokens",
             "to": [{"url": "acc://bob/ACME", "amount": "100"}],
-            "memo": "Payment for services"
+            "memo": "Payment for services",
         }
 
         # Step 2: Get transaction hash
@@ -482,11 +474,13 @@ class TestTransactionCodecEdgeCases:
         sig_metadata = {
             "type": "ed25519",
             "publicKey": "abcd1234" * 8,  # 32 bytes hex
-            "timestamp": header["timestamp"]
+            "timestamp": header["timestamp"],
         }
 
         # Step 4: Hash signature metadata
-        sig_meta_json = json.dumps(sig_metadata, separators=(',', ':'), sort_keys=True).encode('utf-8')
+        sig_meta_json = json.dumps(sig_metadata, separators=(",", ":"), sort_keys=True).encode(
+            "utf-8"
+        )
         sig_meta_hash = sha256_bytes(sig_meta_json)
 
         # Step 5: Create final signing preimage

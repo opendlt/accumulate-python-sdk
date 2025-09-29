@@ -10,24 +10,24 @@ JSON serialization, and transaction signing.
 
 import json
 import os
-import unittest
-from typing import Dict, Any
 
 # Import our crypto helpers
 import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+import unittest
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from helpers.crypto_helpers import (
     canonical_json,
-    sha256_hash,
+    create_signature_envelope,
+    create_transaction_hash,
     derive_lite_identity_url,
     derive_lite_token_account_url,
+    ed25519_keypair_from_seed,
     ed25519_sign,
     ed25519_verify,
-    ed25519_keypair_from_seed,
-    create_transaction_hash,
-    create_signature_envelope,
+    sha256_hash,
+    validate_ed25519_test_vector,
     verify_signature_envelope,
-    validate_ed25519_test_vector
 )
 
 
@@ -40,20 +40,20 @@ class TestTSParity(unittest.TestCase):
         golden_dir = os.path.join(os.path.dirname(__file__), "..", "golden")
 
         # Load comprehensive fixtures
-        with open(os.path.join(golden_dir, "ts_parity_fixtures.json"), "r") as f:
+        with open(os.path.join(golden_dir, "ts_parity_fixtures.json")) as f:
             cls.fixtures = json.load(f)
 
         # Load specific fixtures
-        with open(os.path.join(golden_dir, "tx_signing_vectors.json"), "r") as f:
+        with open(os.path.join(golden_dir, "tx_signing_vectors.json")) as f:
             cls.signing_vectors = json.load(f)
 
-        with open(os.path.join(golden_dir, "envelope_fixed.golden.json"), "r") as f:
+        with open(os.path.join(golden_dir, "envelope_fixed.golden.json")) as f:
             cls.envelope_fixed = json.load(f)
 
-        with open(os.path.join(golden_dir, "sig_ed25519.golden.json"), "r") as f:
+        with open(os.path.join(golden_dir, "sig_ed25519.golden.json")) as f:
             cls.sig_ed25519 = json.load(f)
 
-        with open(os.path.join(golden_dir, "tx_only.golden.json"), "r") as f:
+        with open(os.path.join(golden_dir, "tx_only.golden.json")) as f:
             cls.tx_only = json.load(f)
 
     def test_canonical_json_serialization(self):
@@ -64,10 +64,11 @@ class TestTSParity(unittest.TestCase):
                 expected = vector["expectedJSON"]
 
                 self.assertEqual(
-                    actual, expected,
+                    actual,
+                    expected,
                     f"Canonical JSON mismatch for {vector['name']}:\n"
                     f"Expected: {expected}\n"
-                    f"Actual:   {actual}"
+                    f"Actual:   {actual}",
                 )
 
     def test_sha256_hashing(self):
@@ -79,11 +80,12 @@ class TestTSParity(unittest.TestCase):
                 expected_hash = bytes.fromhex(vector["expectedHash"])
 
                 self.assertEqual(
-                    actual_hash, expected_hash,
+                    actual_hash,
+                    expected_hash,
                     f"SHA-256 hash mismatch for {vector['name']}:\n"
                     f"Input: {vector['input']}\n"
                     f"Expected: {vector['expectedHash']}\n"
-                    f"Actual:   {actual_hash.hex()}"
+                    f"Actual:   {actual_hash.hex()}",
                 )
 
                 # Test bytes input
@@ -102,10 +104,11 @@ class TestTSParity(unittest.TestCase):
                 # Check public key matches
                 expected_public_key = bytes.fromhex(vector["publicKey"])
                 self.assertEqual(
-                    public_key_bytes, expected_public_key,
+                    public_key_bytes,
+                    expected_public_key,
                     f"Public key mismatch for {vector['name']}:\n"
                     f"Expected: {vector['publicKey']}\n"
-                    f"Actual:   {public_key_bytes.hex()}"
+                    f"Actual:   {public_key_bytes.hex()}",
                 )
 
     def test_lite_url_derivation(self):
@@ -118,20 +121,22 @@ class TestTSParity(unittest.TestCase):
                 actual_lid = derive_lite_identity_url(public_key_bytes)
                 expected_lid = vector["lid"]
                 self.assertEqual(
-                    actual_lid, expected_lid,
+                    actual_lid,
+                    expected_lid,
                     f"LID mismatch for {vector['name']}:\n"
                     f"Expected: {expected_lid}\n"
-                    f"Actual:   {actual_lid}"
+                    f"Actual:   {actual_lid}",
                 )
 
                 # Test LTA derivation
                 actual_lta = derive_lite_token_account_url(public_key_bytes)
                 expected_lta = vector["lta"]
                 self.assertEqual(
-                    actual_lta, expected_lta,
+                    actual_lta,
+                    expected_lta,
                     f"LTA mismatch for {vector['name']}:\n"
                     f"Expected: {expected_lta}\n"
-                    f"Actual:   {actual_lta}"
+                    f"Actual:   {actual_lta}",
                 )
 
     def test_ed25519_signing(self):
@@ -155,26 +160,21 @@ class TestTSParity(unittest.TestCase):
         # Test message hashing
         actual_hash = sha256_hash(message_bytes)
         self.assertEqual(
-            actual_hash, expected_hash,
+            actual_hash,
+            expected_hash,
             f"Message hash mismatch:\n"
             f"Expected: {expected_hash.hex()}\n"
-            f"Actual:   {actual_hash.hex()}"
+            f"Actual:   {actual_hash.hex()}",
         )
 
         # Test signature verification (signature is deterministic in TS)
         is_valid = ed25519_verify(public_key_bytes, expected_signature, actual_hash)
-        self.assertTrue(
-            is_valid,
-            "TS signature should verify against Python crypto"
-        )
+        self.assertTrue(is_valid, "TS signature should verify against Python crypto")
 
         # Test Python signature generation and verification
         python_signature = ed25519_sign(private_key_bytes, actual_hash)
         is_python_valid = ed25519_verify(public_key_bytes, python_signature, actual_hash)
-        self.assertTrue(
-            is_python_valid,
-            "Python-generated signature should verify"
-        )
+        self.assertTrue(is_python_valid, "Python-generated signature should verify")
 
     def test_transaction_hashing(self):
         """Test transaction hashing matches TS SDK"""
@@ -187,17 +187,19 @@ class TestTSParity(unittest.TestCase):
                 # Test canonical JSON
                 actual_canonical = canonical_json(transaction)
                 self.assertEqual(
-                    actual_canonical, expected_canonical,
-                    f"Canonical JSON mismatch for {vector['name']}"
+                    actual_canonical,
+                    expected_canonical,
+                    f"Canonical JSON mismatch for {vector['name']}",
                 )
 
                 # Test hash
                 actual_hash = create_transaction_hash(transaction)
                 self.assertEqual(
-                    actual_hash, expected_hash,
+                    actual_hash,
+                    expected_hash,
                     f"Transaction hash mismatch for {vector['name']}:\n"
                     f"Expected: {expected_hash.hex()}\n"
-                    f"Actual:   {actual_hash.hex()}"
+                    f"Actual:   {actual_hash.hex()}",
                 )
 
     def test_envelope_structure(self):
@@ -248,38 +250,24 @@ class TestTSParity(unittest.TestCase):
 
         # Verify envelope signatures
         is_valid = verify_signature_envelope(envelope)
-        self.assertTrue(
-            is_valid,
-            "TS-generated envelope should verify with Python crypto"
-        )
+        self.assertTrue(is_valid, "TS-generated envelope should verify with Python crypto")
 
     def test_ed25519_test_vectors_validation(self):
         """Test all Ed25519 test vectors validate correctly"""
         for vector in self.signing_vectors["vectors"]:
             with self.subTest(name=vector["name"]):
                 is_valid = validate_ed25519_test_vector(vector)
-                self.assertTrue(
-                    is_valid,
-                    f"Test vector {vector['name']} should validate"
-                )
+                self.assertTrue(is_valid, f"Test vector {vector['name']} should validate")
 
     def test_round_trip_envelope_creation(self):
         """Test creating and verifying envelope matches TS behavior"""
         # Use a simple transaction
         transaction = {
-            "header": {
-                "principal": "acc://test.acme/tokens",
-                "timestamp": 1640995200000000
-            },
+            "header": {"principal": "acc://test.acme/tokens", "timestamp": 1640995200000000},
             "body": {
                 "type": "sendTokens",
-                "to": [
-                    {
-                        "url": "acc://recipient.acme/tokens",
-                        "amount": "500000"
-                    }
-                ]
-            }
+                "to": [{"url": "acc://recipient.acme/tokens", "amount": "500000"}],
+            },
         }
 
         # Use a known private key
@@ -304,16 +292,12 @@ class TestTSParity(unittest.TestCase):
             # Empty objects
             ({}, "{}"),
             ([], "[]"),
-
             # Nested structures
             ({"b": {"y": 2, "x": 1}, "a": 1}, '{"a":1,"b":{"x":1,"y":2}}'),
-
             # Numbers and strings
             ({"num": 123, "str": "test", "bool": True}, '{"bool":true,"num":123,"str":"test"}'),
-
             # Null values
             ({"null": None, "empty": ""}, '{"empty":"","null":null}'),
-
             # Unicode
             ({"unicode": "test🚀"}, '{"unicode":"test🚀"}'),
         ]
@@ -348,18 +332,9 @@ class TestTSParity(unittest.TestCase):
         """Test URL checksum algorithm matches TS SDK exactly"""
         # Test with known vectors from TS SDK
         test_cases = [
-            {
-                "keyHash": "139e3940e64b5491722088d9a0d741628fc826e0",
-                "expectedChecksum": "a80337ad"
-            },
-            {
-                "keyHash": "105251bb367baa372c748930531ae63d6e143c9a",
-                "expectedChecksum": "a4470eff"
-            },
-            {
-                "keyHash": "e0cfdc239dbe6e1929ee5a99d230682b3cf5498f",
-                "expectedChecksum": "e115b24d"
-            }
+            {"keyHash": "139e3940e64b5491722088d9a0d741628fc826e0", "expectedChecksum": "a80337ad"},
+            {"keyHash": "105251bb367baa372c748930531ae63d6e143c9a", "expectedChecksum": "a4470eff"},
+            {"keyHash": "e0cfdc239dbe6e1929ee5a99d230682b3cf5498f", "expectedChecksum": "e115b24d"},
         ]
 
         for case in test_cases:
@@ -369,8 +344,7 @@ class TestTSParity(unittest.TestCase):
                 checksum = checksum_full[28:].hex()  # Last 4 bytes
 
                 self.assertEqual(
-                    checksum, case["expectedChecksum"],
-                    f"Checksum mismatch for {key_str}"
+                    checksum, case["expectedChecksum"], f"Checksum mismatch for {key_str}"
                 )
 
 

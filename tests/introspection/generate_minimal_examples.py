@@ -9,7 +9,6 @@ Creates safe default instances and validates encode→decode→re-encode equalit
 
 import json
 import os
-import sys
 from typing import Any, Dict, List
 
 
@@ -18,7 +17,7 @@ def load_type_manifest() -> Dict[str, Any]:
     script_dir = os.path.dirname(os.path.abspath(__file__))
     manifest_path = os.path.join(script_dir, "type_manifest.json")
 
-    with open(manifest_path, 'r') as f:
+    with open(manifest_path) as f:
         return json.load(f)
 
 
@@ -75,7 +74,7 @@ def generate_serialization_tests(type_info: Dict[str, Any]) -> str:
         result = instance.{method_name}()
         self.assertIsNotNone(result)""")
 
-    return '\n'.join(test_code) if test_code else "# No specific serialization tests needed"
+    return "\n".join(test_code) if test_code else "# No specific serialization tests needed"
 
 
 def generate_instance_creation(type_name: str, type_info: Dict[str, Any]) -> str:
@@ -111,15 +110,15 @@ def generate_instance_creation(type_name: str, type_info: Dict[str, Any]) -> str
                 if "str" in field_type:
                     field_assignments.append(f'{field_name}="test"')
                 elif "int" in field_type:
-                    field_assignments.append(f'{field_name}=123')
+                    field_assignments.append(f"{field_name}=123")
                 elif "bool" in field_type:
-                    field_assignments.append(f'{field_name}=True')
+                    field_assignments.append(f"{field_name}=True")
                 elif "bytes" in field_type:
                     field_assignments.append(f'{field_name}=b"test"')
                 else:
-                    field_assignments.append(f'{field_name}=None')
+                    field_assignments.append(f"{field_name}=None")
 
-            args = ', '.join(field_assignments)
+            args = ", ".join(field_assignments)
             return f"return {type_name}({args})"
         else:
             return f"return {type_name}()"
@@ -142,12 +141,10 @@ def identify_uncovered_types() -> List[Dict[str, Any]]:
             "module": "demo_module",
             "fields": [
                 {"name": "id", "type": "str", "required": True},
-                {"name": "value", "type": "int", "required": False}
+                {"name": "value", "type": "int", "required": False},
             ],
-            "methods": [
-                {"name": "encode", "signature": "() -> bytes"}
-            ]
-        }
+            "methods": [{"name": "encode", "signature": "() -> bytes"}],
+        },
     }
 
     # Since all our actual types are covered, we won't add the demo
@@ -200,7 +197,13 @@ def validate_all_types_covered():
 
     manifest = load_type_manifest()
 
-    core_types = ["BinaryReader", "BinaryWriter", "Ed25519KeyPair", "TransactionCodec", "AccumulateCodec"]
+    core_types = [
+        "BinaryReader",
+        "BinaryWriter",
+        "Ed25519KeyPair",
+        "TransactionCodec",
+        "AccumulateCodec",
+    ]
 
     coverage_status = {}
 
@@ -211,25 +214,30 @@ def validate_all_types_covered():
             # Check for serialization methods
             methods = type_info.get("methods", [])
             has_serialization = any(
-                any(keyword in method["name"].lower() for keyword in ["marshal", "encode", "decode", "serialize"])
+                any(
+                    keyword in method["name"].lower()
+                    for keyword in ["marshal", "encode", "decode", "serialize"]
+                )
                 for method in methods
             )
 
             coverage_status[type_name] = {
                 "has_methods": has_serialization,
                 "method_count": len(methods),
-                "is_covered": True  # All our core types are covered by tests
+                "is_covered": True,  # All our core types are covered by tests
             }
 
     print("Coverage Summary:")
     all_covered = True
 
     for type_name, status in coverage_status.items():
-        methods_info = f"({status['method_count']} methods)" if status['has_methods'] else "(no methods)"
-        coverage_info = "COVERED" if status['is_covered'] else "MISSING"
+        methods_info = (
+            f"({status['method_count']} methods)" if status["has_methods"] else "(no methods)"
+        )
+        coverage_info = "COVERED" if status["is_covered"] else "MISSING"
         print(f"  - {type_name}: {coverage_info} {methods_info}")
 
-        if not status['is_covered']:
+        if not status["is_covered"]:
             all_covered = False
 
     if all_covered:

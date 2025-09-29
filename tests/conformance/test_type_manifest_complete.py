@@ -9,11 +9,8 @@ marshal/unmarshal tests and coverage validation.
 
 import json
 import os
-import sys
 import unittest
-from typing import Dict, List, Set, Any
-import importlib
-import inspect
+from typing import Any, Dict, List
 
 
 class TestTypeManifestComplete(unittest.TestCase):
@@ -22,7 +19,9 @@ class TestTypeManifestComplete(unittest.TestCase):
     def setUp(self):
         """Set up test configuration"""
         self.repo_root = os.path.join(os.path.dirname(__file__), "..", "..")
-        self.manifest_path = os.path.join(self.repo_root, "tests", "introspection", "type_manifest.json")
+        self.manifest_path = os.path.join(
+            self.repo_root, "tests", "introspection", "type_manifest.json"
+        )
 
         # Load type manifest
         self.manifest = self.load_manifest()
@@ -33,14 +32,23 @@ class TestTypeManifestComplete(unittest.TestCase):
             "TransactionCodec",
             "BinaryWriter",
             "BinaryReader",
-            "Ed25519KeyPair"
+            "Ed25519KeyPair",
         }
 
         # Define serialization methods we expect to find
         self.expected_serialization_methods = {
-            "encode", "decode", "marshal_binary", "unmarshal_binary",
-            "to_dict", "from_dict", "to_json", "from_json",
-            "to_bytes", "from_bytes", "serialize", "deserialize"
+            "encode",
+            "decode",
+            "marshal_binary",
+            "unmarshal_binary",
+            "to_dict",
+            "from_dict",
+            "to_json",
+            "from_json",
+            "to_bytes",
+            "from_bytes",
+            "serialize",
+            "deserialize",
         }
 
     def load_manifest(self) -> Dict[str, Any]:
@@ -51,7 +59,7 @@ class TestTypeManifestComplete(unittest.TestCase):
                 f"Run: python tests/introspection/collect_types.py"
             )
 
-        with open(self.manifest_path, 'r') as f:
+        with open(self.manifest_path) as f:
             return json.load(f)
 
     def get_relevant_types(self) -> Dict[str, Dict[str, Any]]:
@@ -68,13 +76,15 @@ class TestTypeManifestComplete(unittest.TestCase):
             # Skip duplicates (prefer the main module version)
             if type_name in self.core_protocol_types:
                 # Prefer accumulate_client.* over module-specific names
-                if full_name.startswith("accumulate_client."):
-                    relevant_types[full_name] = type_info
-                elif type_name not in [t["name"] for t in relevant_types.values()]:
+                if full_name.startswith("accumulate_client.") or type_name not in [
+                    t["name"] for t in relevant_types.values()
+                ]:
                     relevant_types[full_name] = type_info
 
             # Include all other non-generic types
-            elif not type_name.startswith("_") and type_info["module"].startswith("accumulate_client"):
+            elif not type_name.startswith("_") and type_info["module"].startswith(
+                "accumulate_client"
+            ):
                 relevant_types[full_name] = type_info
 
         return relevant_types
@@ -85,24 +95,24 @@ class TestTypeManifestComplete(unittest.TestCase):
             "unit_tests": [],
             "conformance_tests": [],
             "fuzz_tests": [],
-            "golden_vectors": []
+            "golden_vectors": [],
         }
 
         # Search test directories for mentions of the type
         test_dirs = [
             os.path.join(self.repo_root, "tests", "unit"),
             os.path.join(self.repo_root, "tests", "conformance"),
-            os.path.join(self.repo_root, "tests", "fuzz")
+            os.path.join(self.repo_root, "tests", "fuzz"),
         ]
 
         for test_dir in test_dirs:
             if os.path.exists(test_dir):
                 for root, dirs, files in os.walk(test_dir):
                     for file in files:
-                        if file.endswith('.py'):
+                        if file.endswith(".py"):
                             file_path = os.path.join(root, file)
                             try:
-                                with open(file_path, 'r', encoding='utf-8') as f:
+                                with open(file_path, encoding="utf-8") as f:
                                     content = f.read()
                                     if type_name in content:
                                         rel_path = os.path.relpath(file_path, self.repo_root)
@@ -119,10 +129,10 @@ class TestTypeManifestComplete(unittest.TestCase):
         golden_dir = os.path.join(self.repo_root, "tests", "golden")
         if os.path.exists(golden_dir):
             for file in os.listdir(golden_dir):
-                if file.endswith('.json') or file.endswith('.jsonl'):
+                if file.endswith(".json") or file.endswith(".jsonl"):
                     file_path = os.path.join(golden_dir, file)
                     try:
-                        with open(file_path, 'r', encoding='utf-8') as f:
+                        with open(file_path, encoding="utf-8") as f:
                             content = f.read()
                             if type_name in content:
                                 coverage["golden_vectors"].append(file)
@@ -139,7 +149,7 @@ class TestTypeManifestComplete(unittest.TestCase):
         total_types = self.manifest["summary"]["total_types"]
         self.assertGreater(total_types, 0, "No types found in manifest")
 
-        print(f"\nType manifest summary:")
+        print("\nType manifest summary:")
         print(f"  Total types: {total_types}")
         print(f"  Serializable types: {self.manifest['summary']['serializable_types']}")
 
@@ -175,7 +185,10 @@ class TestTypeManifestComplete(unittest.TestCase):
                 methods = [method["name"] for method in type_info.get("methods", [])]
 
                 has_serialization = any(
-                    any(keyword in method.lower() for keyword in ["marshal", "encode", "decode", "serialize"])
+                    any(
+                        keyword in method.lower()
+                        for keyword in ["marshal", "encode", "decode", "serialize"]
+                    )
                     for method in methods
                 )
 
@@ -184,13 +197,19 @@ class TestTypeManifestComplete(unittest.TestCase):
                 else:
                     types_needing_serialization.append(type_name)
 
-        print(f"\nTypes with serialization methods:")
+        print("\nTypes with serialization methods:")
         for type_name, methods in types_with_methods:
-            serialization_methods = [m for m in methods if any(k in m.lower() for k in ["marshal", "encode", "decode", "serialize"])]
+            serialization_methods = [
+                m
+                for m in methods
+                if any(k in m.lower() for k in ["marshal", "encode", "decode", "serialize"])
+            ]
             print(f"  - {type_name}: {serialization_methods}")
 
         if types_needing_serialization:
-            print(f"\nTypes potentially needing serialization methods: {types_needing_serialization}")
+            print(
+                f"\nTypes potentially needing serialization methods: {types_needing_serialization}"
+            )
 
     def test_types_have_test_coverage(self):
         """Test that core protocol types have appropriate test coverage"""
@@ -206,24 +225,24 @@ class TestTypeManifestComplete(unittest.TestCase):
                 coverage = self.find_test_coverage(type_name)
 
                 total_coverage = (
-                    len(coverage["unit_tests"]) +
-                    len(coverage["conformance_tests"]) +
-                    len(coverage["fuzz_tests"]) +
-                    len(coverage["golden_vectors"])
+                    len(coverage["unit_tests"])
+                    + len(coverage["conformance_tests"])
+                    + len(coverage["fuzz_tests"])
+                    + len(coverage["golden_vectors"])
                 )
 
                 coverage_info = {
                     "type": type_name,
                     "full_name": full_name,
                     "coverage": coverage,
-                    "total_coverage": total_coverage
+                    "total_coverage": total_coverage,
                 }
                 coverage_report.append(coverage_info)
 
                 if total_coverage == 0:
                     uncovered_types.append(type_name)
 
-        print(f"\nTest coverage report:")
+        print("\nTest coverage report:")
         for info in coverage_report:
             type_name = info["type"]
             total = info["total_coverage"]
@@ -259,16 +278,18 @@ class TestTypeManifestComplete(unittest.TestCase):
                 total_coverage = sum(len(tests) for tests in coverage.values())
 
                 if total_coverage == 0:
-                    examples_needed.append({
-                        "type": type_name,
-                        "full_name": full_name,
-                        "module": type_info["module"],
-                        "fields": type_info.get("fields", []),
-                        "methods": type_info.get("methods", [])
-                    })
+                    examples_needed.append(
+                        {
+                            "type": type_name,
+                            "full_name": full_name,
+                            "module": type_info["module"],
+                            "fields": type_info.get("fields", []),
+                            "methods": type_info.get("methods", []),
+                        }
+                    )
 
         if examples_needed:
-            print(f"\nTypes needing minimal examples:")
+            print("\nTypes needing minimal examples:")
             for example in examples_needed:
                 print(f"  - {example['type']} from {example['module']}")
                 print(f"    Fields: {[f['name'] for f in example['fields']]}")
@@ -276,7 +297,9 @@ class TestTypeManifestComplete(unittest.TestCase):
 
             # For now, we'll report this as informational rather than failing
             # In a real implementation, you might want to auto-generate basic tests
-            print(f"\nConsider adding basic roundtrip tests for {len(examples_needed)} uncovered types")
+            print(
+                f"\nConsider adding basic roundtrip tests for {len(examples_needed)} uncovered types"
+            )
 
     def test_type_serialization_roundtrip_integrity(self):
         """Test basic serialization roundtrip integrity for known serializable types"""
@@ -286,10 +309,10 @@ class TestTypeManifestComplete(unittest.TestCase):
             ("BinaryWriter", "to_bytes"),
             ("BinaryReader", "from bytes constructor"),
             ("TransactionCodec", "encode_tx_for_signing"),
-            ("AccumulateCodec", "marshal_binary methods")
+            ("AccumulateCodec", "marshal_binary methods"),
         ]
 
-        print(f"\nSerializable components verification:")
+        print("\nSerializable components verification:")
         for component, capability in serializable_components:
             print(f"  - {component}: {capability}")
 
@@ -300,7 +323,7 @@ class TestTypeManifestComplete(unittest.TestCase):
         """Ensure no protocol types are silently skipped in testing"""
         relevant_types = self.get_relevant_types()
 
-        print(f"\nAll relevant types analysis:")
+        print("\nAll relevant types analysis:")
         print(f"  Total relevant types: {len(relevant_types)}")
 
         core_types_found = 0
@@ -311,7 +334,8 @@ class TestTypeManifestComplete(unittest.TestCase):
                 print(f"  - Core type: {type_name}")
 
         other_types = [
-            type_info["name"] for full_name, type_info in relevant_types.items()
+            type_info["name"]
+            for full_name, type_info in relevant_types.items()
             if type_info["name"] not in self.core_protocol_types
         ]
 
@@ -319,8 +343,9 @@ class TestTypeManifestComplete(unittest.TestCase):
             print(f"  Other types found: {other_types}")
 
         self.assertEqual(
-            core_types_found, len(self.core_protocol_types),
-            f"Expected {len(self.core_protocol_types)} core types, found {core_types_found}"
+            core_types_found,
+            len(self.core_protocol_types),
+            f"Expected {len(self.core_protocol_types)} core types, found {core_types_found}",
         )
 
 

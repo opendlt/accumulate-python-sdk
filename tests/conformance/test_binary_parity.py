@@ -12,17 +12,11 @@ import json
 import os
 import sys
 import unittest
-from typing import Dict, Any
 
 # Import codec modules
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from src.accumulate_client.codec import (
-    BinaryWriter,
-    BinaryReader,
-    TransactionCodec,
-    sha256_bytes
-)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from src.accumulate_client.canonjson import dumps_canonical
+from src.accumulate_client.codec import BinaryReader, BinaryWriter, TransactionCodec, sha256_bytes
 from src.accumulate_client.codec.transaction_codec import AccumulateCodec
 from tests.helpers.parity import assert_hex_equal
 
@@ -36,13 +30,13 @@ class TestBinaryParity(unittest.TestCase):
         golden_dir = os.path.join(os.path.dirname(__file__), "..", "golden")
 
         # Load Python golden fixtures (from TS parity work)
-        with open(os.path.join(golden_dir, "envelope_fixed.golden.json"), "r") as f:
+        with open(os.path.join(golden_dir, "envelope_fixed.golden.json")) as f:
             cls.envelope_fixed = json.load(f)
 
-        with open(os.path.join(golden_dir, "tx_only.golden.json"), "r") as f:
+        with open(os.path.join(golden_dir, "tx_only.golden.json")) as f:
             cls.tx_only = json.load(f)
 
-        with open(os.path.join(golden_dir, "tx_signing_vectors.json"), "r") as f:
+        with open(os.path.join(golden_dir, "tx_signing_vectors.json")) as f:
             cls.signing_vectors = json.load(f)
 
     def test_primitive_encoding_parity(self):
@@ -69,8 +63,8 @@ class TestBinaryParity(unittest.TestCase):
 
         # Test field encoding (from Dart binary_encoding_test.dart)
         test_cases = [
-            (1, b'\x2a', "012a"),  # field 1, data [42]
-            (7, b'\x00', "0700"),  # field 7, data [0]
+            (1, b"\x2a", "012a"),  # field 1, data [42]
+            (7, b"\x00", "0700"),  # field 7, data [0]
         ]
 
         for field, data, expected_hex in test_cases:
@@ -138,7 +132,7 @@ class TestBinaryParity(unittest.TestCase):
 
         # Test BigInt encoding (from Dart binary_encoding_test.dart)
         test_cases = [
-            (255, "01ff"),    # BigInt 255 = 0xFF, length-prefixed [1, 255]
+            (255, "01ff"),  # BigInt 255 = 0xFF, length-prefixed [1, 255]
             (256, "020100"),  # BigInt 256 = 0x100, length-prefixed [2, 1, 0]
         ]
 
@@ -236,8 +230,8 @@ class TestBinaryParity(unittest.TestCase):
         header_json = dumps_canonical(transaction["header"])
         body_json = dumps_canonical(transaction["body"])
 
-        header_bytes = AccumulateCodec.bytes_marshal_binary(header_json.encode('utf-8'))
-        body_bytes = AccumulateCodec.bytes_marshal_binary(body_json.encode('utf-8'))
+        header_bytes = AccumulateCodec.bytes_marshal_binary(header_json.encode("utf-8"))
+        body_bytes = AccumulateCodec.bytes_marshal_binary(body_json.encode("utf-8"))
 
         # Verify encoding produces consistent lengths
         self.assertGreater(len(header_bytes), 0, "Header bytes should not be empty")
@@ -254,7 +248,9 @@ class TestBinaryParity(unittest.TestCase):
 
             # Test hash encoding (no length prefix)
             pub_key_encoded = AccumulateCodec.hash_marshal_binary(public_key_bytes)
-            self.assertEqual(pub_key_encoded, public_key_bytes, "Hash encoding should not add length prefix")
+            self.assertEqual(
+                pub_key_encoded, public_key_bytes, "Hash encoding should not add length prefix"
+            )
 
     def test_golden_vector_compatibility(self):
         """Test compatibility with existing golden vectors"""
@@ -267,25 +263,33 @@ class TestBinaryParity(unittest.TestCase):
 
                 # Test key encoding
                 pub_key_encoded = AccumulateCodec.hash_marshal_binary(public_key_bytes)
-                assert_hex_equal(pub_key_encoded, vector["publicKey"], f"public key encoding for {vector['name']}")
+                assert_hex_equal(
+                    pub_key_encoded,
+                    vector["publicKey"],
+                    f"public key encoding for {vector['name']}",
+                )
 
                 # Test private key as bytes (if used in binary encoding)
                 if len(private_key_bytes) == 32:
                     priv_key_encoded = AccumulateCodec.hash_marshal_binary(private_key_bytes)
-                    assert_hex_equal(priv_key_encoded, vector["privateKey"], f"private key encoding for {vector['name']}")
+                    assert_hex_equal(
+                        priv_key_encoded,
+                        vector["privateKey"],
+                        f"private key encoding for {vector['name']}",
+                    )
 
     def test_varint_edge_cases(self):
         """Test varint encoding edge cases for parity"""
 
         # Test edge cases that might differ between implementations
         edge_cases = [
-            (0, "00"),                    # Zero
-            (0x7F, "7f"),                # Max single-byte
-            (0x80, "8001"),              # Min two-byte
-            (0x3FFF, "ff7f"),            # Max two-byte
-            (0x4000, "808001"),          # Min three-byte
-            (0x1FFFFF, "ffff7f"),        # Max three-byte
-            (0x200000, "80808001"),      # Min four-byte
+            (0, "00"),  # Zero
+            (0x7F, "7f"),  # Max single-byte
+            (0x80, "8001"),  # Min two-byte
+            (0x3FFF, "ff7f"),  # Max two-byte
+            (0x4000, "808001"),  # Min three-byte
+            (0x1FFFFF, "ffff7f"),  # Max three-byte
+            (0x200000, "80808001"),  # Min four-byte
         ]
 
         for value, expected_hex in edge_cases:
@@ -305,9 +309,9 @@ class TestBinaryParity(unittest.TestCase):
 
         # Test u32le encoding
         u32_cases = [
-            (0x12345678, "78563412"),    # Little-endian
-            (0x00000001, "01000000"),    # Small value
-            (0xFFFFFFFF, "ffffffff"),    # Max value
+            (0x12345678, "78563412"),  # Little-endian
+            (0x00000001, "01000000"),  # Small value
+            (0xFFFFFFFF, "ffffffff"),  # Max value
         ]
 
         for value, expected_hex in u32_cases:

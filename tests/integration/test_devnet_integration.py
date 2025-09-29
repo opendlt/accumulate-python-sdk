@@ -4,6 +4,7 @@
 
 import os
 import unittest
+
 from accumulate_client import AccumulateClient
 
 
@@ -13,11 +14,10 @@ class TestDevNetIntegration(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Set up test class with DevNet endpoints"""
-        cls.v2_url = os.environ.get('ACC_RPC_URL_V2', 'http://localhost:26660/v2')
-        cls.v3_url = os.environ.get('ACC_RPC_URL_V3', 'http://localhost:26660/v3')
+        cls.v2_url = os.environ.get("ACC_RPC_URL_V2", "http://localhost:26660/v2")
+        cls.v3_url = os.environ.get("ACC_RPC_URL_V3", "http://localhost:26660/v3")
         cls.faucet_account = os.environ.get(
-            'ACC_FAUCET_ACCOUNT',
-            'acc://a21555da824d14f3f066214657a44e6a1a347dad3052a23a/ACME'
+            "ACC_FAUCET_ACCOUNT", "acc://a21555da824d14f3f066214657a44e6a1a347dad3052a23a/ACME"
         )
 
         cls.v2_client = AccumulateClient(cls.v2_url)
@@ -35,7 +35,7 @@ class TestDevNetIntegration(unittest.TestCase):
             result = self.v2_client.describe()
             self.assertIsInstance(result, dict)
             # DevNet should have version info
-            self.assertIn('version', str(result).lower())
+            self.assertIn("version", str(result).lower())
         except Exception as e:
             self.skipTest(f"DevNet V2 not available: {e}")
 
@@ -43,7 +43,7 @@ class TestDevNetIntegration(unittest.TestCase):
         """Test V3 endpoint connectivity"""
         try:
             # For V3, we'll try a network status call
-            result = self.v3_client.call('network-status', {})
+            result = self.v3_client.call("network-status", {})
             self.assertIsInstance(result, dict)
         except Exception as e:
             self.skipTest(f"DevNet V3 not available: {e}")
@@ -59,8 +59,8 @@ class TestDevNetIntegration(unittest.TestCase):
             error_msg = str(e).lower()
             # If we get a proper validation error, the faucet endpoint is working
             self.assertTrue(
-                any(word in error_msg for word in ['validation', 'invalid', 'url']),
-                f"Unexpected error type: {e}"
+                any(word in error_msg for word in ["validation", "invalid", "url"]),
+                f"Unexpected error type: {e}",
             )
 
     def test_json_rpc_method_names(self):
@@ -68,11 +68,11 @@ class TestDevNetIntegration(unittest.TestCase):
         # Test basic V2 methods
         try:
             # describe should work
-            result = self.v2_client.call('describe')
+            result = self.v2_client.call("describe")
             self.assertIsInstance(result, dict)
 
             # status should work
-            result = self.v2_client.call('status')
+            result = self.v2_client.call("status")
             self.assertIsInstance(result, dict)
 
         except Exception as e:
@@ -83,11 +83,11 @@ class TestDevNetIntegration(unittest.TestCase):
         try:
             # Test invalid method name
             with self.assertRaises(Exception):
-                self.v2_client.call('nonexistent-method')
+                self.v2_client.call("nonexistent-method")
 
             # Test invalid parameters
             with self.assertRaises(Exception):
-                self.v2_client.call('query', {"invalid": "params"})
+                self.v2_client.call("query", {"invalid": "params"})
 
         except Exception as e:
             self.skipTest(f"DevNet not available for error testing: {e}")
@@ -95,6 +95,7 @@ class TestDevNetIntegration(unittest.TestCase):
     def test_request_timeout(self):
         """Test that requests have reasonable timeouts"""
         import time
+
         start_time = time.time()
 
         try:
@@ -112,7 +113,7 @@ class TestDevNetIntegration(unittest.TestCase):
 if __name__ == "__main__":
     # Check if DevNet appears to be running
     try:
-        client = AccumulateClient(os.environ.get('ACC_RPC_URL_V2', 'http://localhost:26660/v2'))
+        client = AccumulateClient(os.environ.get("ACC_RPC_URL_V2", "http://localhost:26660/v2"))
         client.describe()
         client.close()
         print("DevNet appears to be running, proceeding with integration tests...")

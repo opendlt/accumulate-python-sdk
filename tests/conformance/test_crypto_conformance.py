@@ -7,8 +7,9 @@ import json
 import os
 import re
 import unittest
-from cryptography.hazmat.primitives.asymmetric import ed25519
+
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ed25519
 
 
 class TestCryptoConformance(unittest.TestCase):
@@ -18,12 +19,9 @@ class TestCryptoConformance(unittest.TestCase):
     def setUpClass(cls):
         """Load golden test vectors"""
         golden_file = os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "golden",
-            "ed25519_vectors.json"
+            os.path.dirname(__file__), "..", "golden", "ed25519_vectors.json"
         )
-        with open(golden_file, "r") as f:
+        with open(golden_file) as f:
             cls.vectors = json.load(f)
 
     def derive_lite_identity_url(self, public_key_bytes: bytes) -> str:
@@ -38,7 +36,7 @@ class TestCryptoConformance(unittest.TestCase):
         key_str = key_hash_20.hex()
 
         # Calculate checksum
-        checksum_full = hashlib.sha256(key_str.encode('utf-8')).digest()
+        checksum_full = hashlib.sha256(key_str.encode("utf-8")).digest()
         checksum = checksum_full[28:].hex()  # Take last 4 bytes
 
         # Format: acc://<keyHash[0:20]><checksum>
@@ -55,8 +53,7 @@ class TestCryptoConformance(unittest.TestCase):
         # Get public key
         public_key = private_key.public_key()
         public_key_bytes = public_key.public_bytes(
-            encoding=serialization.Encoding.Raw,
-            format=serialization.PublicFormat.Raw
+            encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw
         )
 
         # Check against expected public key
@@ -65,7 +62,7 @@ class TestCryptoConformance(unittest.TestCase):
             public_key_bytes,
             expected_public_key,
             f"Public key mismatch. Expected: {vector['expected_public_key_hex']}, "
-            f"Got: {public_key_bytes.hex()}"
+            f"Got: {public_key_bytes.hex()}",
         )
 
     def test_lite_identity_url_format(self):
@@ -77,8 +74,7 @@ class TestCryptoConformance(unittest.TestCase):
         private_key = ed25519.Ed25519PrivateKey.from_private_bytes(seed_bytes[:32])
         public_key = private_key.public_key()
         public_key_bytes = public_key.public_bytes(
-            encoding=serialization.Encoding.Raw,
-            format=serialization.PublicFormat.Raw
+            encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw
         )
 
         # Derive lite identity URL
@@ -87,8 +83,7 @@ class TestCryptoConformance(unittest.TestCase):
         # Check format matches expected pattern
         pattern = vector["expected_url_pattern"]
         self.assertIsNotNone(
-            re.match(pattern, lite_url),
-            f"URL {lite_url} does not match pattern {pattern}"
+            re.match(pattern, lite_url), f"URL {lite_url} does not match pattern {pattern}"
         )
 
         # Additional checks
@@ -105,8 +100,7 @@ class TestCryptoConformance(unittest.TestCase):
         private_key = ed25519.Ed25519PrivateKey.from_private_bytes(seed_bytes[:32])
         public_key = private_key.public_key()
         public_key_bytes = public_key.public_bytes(
-            encoding=serialization.Encoding.Raw,
-            format=serialization.PublicFormat.Raw
+            encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw
         )
 
         # Check public key matches expected
@@ -114,8 +108,7 @@ class TestCryptoConformance(unittest.TestCase):
         self.assertEqual(
             public_key_bytes,
             expected_public_key,
-            f"Public key mismatch. Expected: {vector['pubKey']}, "
-            f"Got: {public_key_bytes.hex()}"
+            f"Public key mismatch. Expected: {vector['pubKey']}, Got: {public_key_bytes.hex()}",
         )
 
     def test_sha256_hash_function(self):
@@ -130,8 +123,7 @@ class TestCryptoConformance(unittest.TestCase):
         # Test with empty input
         empty_hash = hashlib.sha256(b"").hexdigest()
         self.assertEqual(
-            empty_hash,
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            empty_hash, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
         )
 
     def test_url_checksum_calculation(self):
@@ -141,7 +133,7 @@ class TestCryptoConformance(unittest.TestCase):
         key_str = key_hash_20.hex()
 
         # Calculate checksum
-        checksum_full = hashlib.sha256(key_str.encode('utf-8')).digest()
+        checksum_full = hashlib.sha256(key_str.encode("utf-8")).digest()
         checksum = checksum_full[28:].hex()
 
         # Verify checksum is 8 hex characters (4 bytes)
@@ -149,7 +141,7 @@ class TestCryptoConformance(unittest.TestCase):
         self.assertTrue(all(c in "0123456789abcdef" for c in checksum))
 
         # Verify deterministic
-        checksum2_full = hashlib.sha256(key_str.encode('utf-8')).digest()
+        checksum2_full = hashlib.sha256(key_str.encode("utf-8")).digest()
         checksum2 = checksum2_full[28:].hex()
         self.assertEqual(checksum, checksum2)
 

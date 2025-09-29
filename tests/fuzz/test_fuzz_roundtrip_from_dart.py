@@ -12,17 +12,11 @@ import json
 import os
 import sys
 import unittest
-from typing import Dict, Any, List
 
 # Import modules
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from src.accumulate_client import (
-    TransactionCodec,
-    sha256_bytes,
-    dumps_canonical
-)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+from src.accumulate_client import dumps_canonical, sha256_bytes
 from src.accumulate_client.codec.hashes import hash_transaction
-from tests.helpers.parity import assert_hex_equal
 
 
 class TestFuzzRoundtripFromDart(unittest.TestCase):
@@ -39,7 +33,7 @@ class TestFuzzRoundtripFromDart(unittest.TestCase):
 
         if os.path.exists(vector_path):
             # Load JSONL format (one JSON object per line)
-            with open(vector_path, "r", encoding="utf-8") as f:
+            with open(vector_path, encoding="utf-8") as f:
                 for line_num, line in enumerate(f, 1):
                     line = line.strip()
                     if line:
@@ -59,7 +53,7 @@ class TestFuzzRoundtripFromDart(unittest.TestCase):
         self.assertGreater(
             len(self.vectors),
             0,
-            f"No fuzz vectors loaded. Please run: python tools/generate_fuzz_vectors.py 200 > {self.vector_path}"
+            f"No fuzz vectors loaded. Please run: python tools/generate_fuzz_vectors.py 200 > {self.vector_path}",
         )
 
     def test_fuzz_canonical_json_parity(self):
@@ -89,21 +83,25 @@ class TestFuzzRoundtripFromDart(unittest.TestCase):
 
                     # Compare canonical JSON
                     if actual_canonical != expected_canonical:
-                        failures.append({
-                            "index": i,
-                            "type": vector.get("meta", {}).get("txType"),
-                            "expected_len": len(expected_canonical),
-                            "actual_len": len(actual_canonical),
-                            "expected_hash": sha256_bytes(expected_canonical.encode("utf-8")).hex()[:16],
-                            "actual_hash": sha256_bytes(actual_canonical.encode("utf-8")).hex()[:16],
-                        })
+                        failures.append(
+                            {
+                                "index": i,
+                                "type": vector.get("meta", {}).get("txType"),
+                                "expected_len": len(expected_canonical),
+                                "actual_len": len(actual_canonical),
+                                "expected_hash": sha256_bytes(
+                                    expected_canonical.encode("utf-8")
+                                ).hex()[:16],
+                                "actual_hash": sha256_bytes(actual_canonical.encode("utf-8")).hex()[
+                                    :16
+                                ],
+                            }
+                        )
 
                 except Exception as e:
-                    failures.append({
-                        "index": i,
-                        "type": vector.get("meta", {}).get("txType"),
-                        "error": str(e)
-                    })
+                    failures.append(
+                        {"index": i, "type": vector.get("meta", {}).get("txType"), "error": str(e)}
+                    )
 
         # Report failures
         if failures:
@@ -147,19 +145,19 @@ class TestFuzzRoundtripFromDart(unittest.TestCase):
                     # Compare hash
                     actual_tx_hash_hex = actual_tx_hash.hex()
                     if actual_tx_hash_hex != expected_tx_hash_hex:
-                        failures.append({
-                            "index": i,
-                            "type": vector.get("meta", {}).get("txType"),
-                            "expected": expected_tx_hash_hex,
-                            "actual": actual_tx_hash_hex,
-                        })
+                        failures.append(
+                            {
+                                "index": i,
+                                "type": vector.get("meta", {}).get("txType"),
+                                "expected": expected_tx_hash_hex,
+                                "actual": actual_tx_hash_hex,
+                            }
+                        )
 
                 except Exception as e:
-                    failures.append({
-                        "index": i,
-                        "type": vector.get("meta", {}).get("txType"),
-                        "error": str(e)
-                    })
+                    failures.append(
+                        {"index": i, "type": vector.get("meta", {}).get("txType"), "error": str(e)}
+                    )
 
         # Report failures
         if failures:
@@ -194,20 +192,20 @@ class TestFuzzRoundtripFromDart(unittest.TestCase):
 
                     # Compare bytes
                     if reencoded_bytes != original_bytes:
-                        failures.append({
-                            "index": i,
-                            "type": vector.get("meta", {}).get("txType"),
-                            "original_len": len(original_bytes),
-                            "reencoded_len": len(reencoded_bytes),
-                            "bytes_match": False,
-                        })
+                        failures.append(
+                            {
+                                "index": i,
+                                "type": vector.get("meta", {}).get("txType"),
+                                "original_len": len(original_bytes),
+                                "reencoded_len": len(reencoded_bytes),
+                                "bytes_match": False,
+                            }
+                        )
 
                 except Exception as e:
-                    failures.append({
-                        "index": i,
-                        "type": vector.get("meta", {}).get("txType"),
-                        "error": str(e)
-                    })
+                    failures.append(
+                        {"index": i, "type": vector.get("meta", {}).get("txType"), "error": str(e)}
+                    )
 
         # Report failures
         if failures:
@@ -237,7 +235,7 @@ class TestFuzzRoundtripFromDart(unittest.TestCase):
         # Expected transaction types (based on loaded golden vectors)
         expected_types = {
             "sendTokens",
-            "addCredits"  # From ts_parity_fixtures.json
+            "addCredits",  # From ts_parity_fixtures.json
         }
 
         # Check coverage
@@ -248,14 +246,18 @@ class TestFuzzRoundtripFromDart(unittest.TestCase):
             self.fail(f"Missing transaction types in vectors: {missing_types}")
 
         # Check minimum coverage per type
-        min_coverage = max(1, len(self.vectors) // (len(expected_types) * 2))  # At least 1/12 of vectors per type
+        min_coverage = max(
+            1, len(self.vectors) // (len(expected_types) * 2)
+        )  # At least 1/12 of vectors per type
         under_covered = []
         for tx_type in expected_types:
             if type_counts.get(tx_type, 0) < min_coverage:
                 under_covered.append(tx_type)
 
         if under_covered:
-            print(f"Warning: Under-covered transaction types (< {min_coverage} vectors): {under_covered}")
+            print(
+                f"Warning: Under-covered transaction types (< {min_coverage} vectors): {under_covered}"
+            )
 
     def test_fuzz_field_variety_coverage(self):
         """Test field variety and edge cases in the vectors"""
@@ -310,7 +312,7 @@ class TestFuzzRoundtripFromDart(unittest.TestCase):
             except Exception:
                 continue  # Skip malformed vectors
 
-        print(f"\nField variety coverage:")
+        print("\nField variety coverage:")
         for field, count in stats.items():
             percentage = (count / len(self.vectors)) * 100
             print(f"  {field}: {count} ({percentage:.1f}%)")
@@ -351,7 +353,7 @@ class TestFuzzRoundtripFromDart(unittest.TestCase):
                 self.assertEqual(
                     actual_canonical,
                     expected_canonical,
-                    f"Large vector {i} (size: {size}) canonical JSON mismatch"
+                    f"Large vector {i} (size: {size}) canonical JSON mismatch",
                 )
 
                 # Test transaction hash
@@ -368,7 +370,7 @@ class TestFuzzRoundtripFromDart(unittest.TestCase):
                 self.assertEqual(
                     actual_hash,
                     expected_hash,
-                    f"Large vector {i} (size: {size}) transaction hash mismatch"
+                    f"Large vector {i} (size: {size}) transaction hash mismatch",
                 )
 
     def test_fuzz_vector_metadata_consistency(self):
@@ -397,7 +399,9 @@ class TestFuzzRoundtripFromDart(unittest.TestCase):
 
                 # Check index consistency
                 if meta.get("index") != i:
-                    metadata_issues.append(f"Vector {i}: Index mismatch (expected {i}, got {meta.get('index')})")
+                    metadata_issues.append(
+                        f"Vector {i}: Index mismatch (expected {i}, got {meta.get('index')})"
+                    )
 
                 # Check hex format
                 hex_bin = vector["hexBin"]
@@ -406,14 +410,18 @@ class TestFuzzRoundtripFromDart(unittest.TestCase):
                 if not all(c in "0123456789abcdef" for c in hex_bin.lower()):
                     metadata_issues.append(f"Vector {i}: Invalid hexBin format")
 
-                if len(tx_hash_hex) != 64 or not all(c in "0123456789abcdef" for c in tx_hash_hex.lower()):
-                    metadata_issues.append(f"Vector {i}: Invalid txHashHex format (expected 64 hex chars)")
+                if len(tx_hash_hex) != 64 or not all(
+                    c in "0123456789abcdef" for c in tx_hash_hex.lower()
+                ):
+                    metadata_issues.append(
+                        f"Vector {i}: Invalid txHashHex format (expected 64 hex chars)"
+                    )
 
             except Exception as e:
                 metadata_issues.append(f"Vector {i}: Exception during validation: {e}")
 
         if metadata_issues:
-            print(f"\nMetadata issues found:")
+            print("\nMetadata issues found:")
             for issue in metadata_issues[:10]:  # Show first 10 issues
                 print(f"  {issue}")
 

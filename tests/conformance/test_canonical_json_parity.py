@@ -12,12 +12,10 @@ import json
 import os
 import sys
 import unittest
-from typing import Dict, Any
 
 # Import canonjson module
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from src.accumulate_client.canonjson import dumps_canonical
-from tests.helpers.parity import assert_hex_equal
 from src.accumulate_client.codec import sha256_bytes
 
 
@@ -28,15 +26,7 @@ class TestCanonicalJsonParity(unittest.TestCase):
         """Test exact match with Dart canonical_json_test.dart golden fixture"""
 
         # From Dart canonical_json_test.dart:9-17
-        input_obj = {
-            "b": 2,
-            "a": {"d": 4, "c": 3},
-            "arr": [
-                {"y": 2, "x": 1},
-                {"b": 0},
-                {"a": 0}
-            ]
-        }
+        input_obj = {"b": 2, "a": {"d": 4, "c": 3}, "arr": [{"y": 2, "x": 1}, {"b": 0}, {"a": 0}]}
 
         # From Dart canonical_json_test.dart:22-23
         expected = '{"a":{"c":3,"d":4},"arr":[{"x":1,"y":2},{"b":0},{"a":0}],"b":2}'
@@ -57,16 +47,15 @@ class TestCanonicalJsonParity(unittest.TestCase):
         test_cases = [
             # Basic alphabetic ordering
             ({"z": 1, "a": 2, "m": 3}, '{"a":2,"m":3,"z":1}'),
-
             # Numeric keys (as strings in JSON)
             ({"10": "ten", "2": "two", "1": "one"}, '{"1":"one","10":"ten","2":"two"}'),
-
             # Mixed alphanumeric
             ({"b1": 1, "a2": 2, "a1": 3}, '{"a1":3,"a2":2,"b1":1}'),
-
             # Special characters (common in URLs/keys)
-            ({"key_with_underscore": 1, "key-with-dash": 2, "keywithdot.ext": 3},
-             '{"key-with-dash":2,"key_with_underscore":1,"keywithdot.ext":3}'),
+            (
+                {"key_with_underscore": 1, "key-with-dash": 2, "keywithdot.ext": 3},
+                '{"key-with-dash":2,"key_with_underscore":1,"keywithdot.ext":3}',
+            ),
         ]
 
         for input_obj, expected in test_cases:
@@ -78,18 +67,14 @@ class TestCanonicalJsonParity(unittest.TestCase):
         """Test recursive canonicalization of nested objects"""
 
         input_obj = {
-            "outer": {
-                "z": {"inner_z": 1, "inner_a": 2},
-                "a": {"inner_b": 3, "inner_a": 4}
-            },
-            "array": [
-                {"c": 1, "a": 2, "b": 3},
-                [{"nested": {"z": 1, "a": 2}}]
-            ]
+            "outer": {"z": {"inner_z": 1, "inner_a": 2}, "a": {"inner_b": 3, "inner_a": 4}},
+            "array": [{"c": 1, "a": 2, "b": 3}, [{"nested": {"z": 1, "a": 2}}]],
         }
 
-        expected = ('{"array":[{"a":2,"b":3,"c":1},[{"nested":{"a":2,"z":1}}]],'
-                   '"outer":{"a":{"inner_a":4,"inner_b":3},"z":{"inner_a":2,"inner_z":1}}}')
+        expected = (
+            '{"array":[{"a":2,"b":3,"c":1},[{"nested":{"a":2,"z":1}}]],'
+            '"outer":{"a":{"inner_a":4,"inner_b":3},"z":{"inner_a":2,"inner_z":1}}}'
+        )
 
         actual = dumps_canonical(input_obj)
         self.assertEqual(actual, expected, "Nested object canonicalization failed")
@@ -103,19 +88,15 @@ class TestCanonicalJsonParity(unittest.TestCase):
             (3.14159, "3.14159"),
             (-100, "-100"),
             (0, "0"),
-
             # Strings
             ("hello", '"hello"'),
             ("", '""'),
             ("unicode: ñáéíóú", '"unicode: ñáéíóú"'),
-
             # Booleans
             (True, "true"),
             (False, "false"),
-
             # Null
             (None, "null"),
-
             # Arrays of primitives
             ([1, 2, 3], "[1,2,3]"),
             (["a", "b", "c"], '["a","b","c"]'),
@@ -164,31 +145,28 @@ class TestCanonicalJsonParity(unittest.TestCase):
             "transaction": {
                 "header": {
                     "principal": "acc://alice.acme/book",
-                    "initiator": "0123456789abcdef" * 4  # 32 bytes hex
+                    "initiator": "0123456789abcdef" * 4,  # 32 bytes hex
                 },
                 "body": {
                     "type": "sendTokens",
-                    "to": [{"url": "acc://bob.acme/tokens", "amount": "1000"}]
-                }
+                    "to": [{"url": "acc://bob.acme/tokens", "amount": "1000"}],
+                },
             },
-            "metadata": {
-                "timestamp": 1234567890,
-                "nonce": 42
-            }
+            "metadata": {"timestamp": 1234567890, "nonce": 42},
         }
 
         # Generate canonical JSON
         canonical = dumps_canonical(test_obj)
 
         # Hash should be deterministic
-        hash1 = sha256_bytes(canonical.encode('utf-8'))
-        hash2 = sha256_bytes(canonical.encode('utf-8'))
+        hash1 = sha256_bytes(canonical.encode("utf-8"))
+        hash2 = sha256_bytes(canonical.encode("utf-8"))
         self.assertEqual(hash1, hash2, "Hash should be deterministic")
 
         # Re-parse and canonicalize should produce same hash
         reparsed = json.loads(canonical)
         canonical2 = dumps_canonical(reparsed)
-        hash3 = sha256_bytes(canonical2.encode('utf-8'))
+        hash3 = sha256_bytes(canonical2.encode("utf-8"))
         self.assertEqual(hash1, hash3, "Round-trip should preserve hash")
 
         # Verify canonical form is properly ordered
@@ -202,15 +180,15 @@ class TestCanonicalJsonParity(unittest.TestCase):
         # Similar to patterns used in transaction_codec.py
         header = {
             "principal": "acc://alice.acme/book",
-            "initiator": bytes([0x01, 0x02, 0x03]).hex()  # Will be converted to string
+            "initiator": bytes([0x01, 0x02, 0x03]).hex(),  # Will be converted to string
         }
 
         body = {
             "type": "sendTokens",
             "to": [
                 {"url": "acc://bob.acme/tokens", "amount": "1000"},
-                {"url": "acc://charlie.acme/tokens", "amount": "500"}
-            ]
+                {"url": "acc://charlie.acme/tokens", "amount": "500"},
+            ],
         }
 
         # Test header canonicalization
@@ -218,7 +196,9 @@ class TestCanonicalJsonParity(unittest.TestCase):
         self.assertIn('"initiator":"010203"', header_canonical)
         self.assertIn('"principal":"acc://alice.acme/book"', header_canonical)
         # Keys should be in alphabetical order
-        self.assertTrue(header_canonical.index('"initiator":') < header_canonical.index('"principal":'))
+        self.assertTrue(
+            header_canonical.index('"initiator":') < header_canonical.index('"principal":')
+        )
 
         # Test body canonicalization
         body_canonical = dumps_canonical(body)
@@ -233,18 +213,15 @@ class TestCanonicalJsonParity(unittest.TestCase):
         test_cases = [
             # Mixed number types
             ({"int": 42, "float": 42.0}, '{"float":42.0,"int":42}'),
-
             # Large numbers
             ({"big": 999999999999999}, '{"big":999999999999999}'),
-
             # Nested empty structures
             ({"a": {}, "b": {"c": []}}, '{"a":{},"b":{"c":[]}}'),
-
             # Complex nesting
-            ({
-                "z": [{"b": 1, "a": 2}],
-                "a": {"z": {"b": 1, "a": 2}}
-            }, '{"a":{"z":{"a":2,"b":1}},"z":[{"a":2,"b":1}]}'),
+            (
+                {"z": [{"b": 1, "a": 2}], "a": {"z": {"b": 1, "a": 2}}},
+                '{"a":{"z":{"a":2,"b":1}},"z":[{"a":2,"b":1}]}',
+            ),
         ]
 
         for input_obj, expected in test_cases:

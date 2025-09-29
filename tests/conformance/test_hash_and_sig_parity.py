@@ -12,15 +12,14 @@ import json
 import os
 import sys
 import unittest
-from typing import Dict, Any
 
 # Import modules
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from src.accumulate_client import Ed25519KeyPair, TransactionCodec, sha256_bytes, dumps_canonical
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+from src.accumulate_client import Ed25519KeyPair, TransactionCodec, dumps_canonical, sha256_bytes
 from src.accumulate_client.codec.hashes import (
-    hash_transaction,
+    create_signing_preimage,
     hash_signature_metadata,
-    create_signing_preimage
+    hash_transaction,
 )
 from tests.helpers.parity import assert_hex_equal
 
@@ -34,13 +33,13 @@ class TestHashAndSigParity(unittest.TestCase):
         golden_dir = os.path.join(os.path.dirname(__file__), "..", "golden")
 
         # Load signature vectors
-        with open(os.path.join(golden_dir, "tx_signing_vectors.json"), "r") as f:
+        with open(os.path.join(golden_dir, "tx_signing_vectors.json")) as f:
             cls.signing_vectors = json.load(f)
 
         # Load envelope fixture if it exists
         envelope_path = os.path.join(golden_dir, "envelope_fixed.golden.json")
         if os.path.exists(envelope_path):
-            with open(envelope_path, "r") as f:
+            with open(envelope_path) as f:
                 cls.envelope_fixed = json.load(f)
         else:
             cls.envelope_fixed = None
@@ -48,7 +47,7 @@ class TestHashAndSigParity(unittest.TestCase):
         # Load sig_ed25519 golden fixture if it exists
         sig_path = os.path.join(golden_dir, "sig_ed25519.golden.json")
         if os.path.exists(sig_path):
-            with open(sig_path, "r") as f:
+            with open(sig_path) as f:
                 cls.sig_ed25519_golden = json.load(f)
         else:
             cls.sig_ed25519_golden = None
@@ -73,7 +72,7 @@ class TestHashAndSigParity(unittest.TestCase):
                 assert_hex_equal(
                     actual_public_key_bytes,
                     expected_public_key_hex,
-                    f"Public key derivation for {vector['name']}"
+                    f"Public key derivation for {vector['name']}",
                 )
 
                 # Test private key round-trip
@@ -81,23 +80,19 @@ class TestHashAndSigParity(unittest.TestCase):
                 assert_hex_equal(
                     actual_private_key_bytes,
                     private_key_hex,
-                    f"Private key round-trip for {vector['name']}"
+                    f"Private key round-trip for {vector['name']}",
                 )
 
                 # Test LID derivation
                 actual_lid = keypair.derive_lite_identity_url()
                 self.assertEqual(
-                    actual_lid,
-                    expected_lid,
-                    f"LID derivation failed for {vector['name']}"
+                    actual_lid, expected_lid, f"LID derivation failed for {vector['name']}"
                 )
 
                 # Test LTA derivation
                 actual_lta = keypair.derive_lite_token_account_url()
                 self.assertEqual(
-                    actual_lta,
-                    expected_lta,
-                    f"LTA derivation failed for {vector['name']}"
+                    actual_lta, expected_lta, f"LTA derivation failed for {vector['name']}"
                 )
 
     def test_ed25519_signing_parity(self):
@@ -125,17 +120,13 @@ class TestHashAndSigParity(unittest.TestCase):
                 # Test message hashing
                 actual_hash = sha256_bytes(test_message_bytes)
                 assert_hex_equal(
-                    actual_hash,
-                    expected_hash_hex,
-                    f"Message hash for {vector['name']}"
+                    actual_hash, expected_hash_hex, f"Message hash for {vector['name']}"
                 )
 
                 # Test signature generation
                 actual_signature = keypair.sign(actual_hash)
                 self.assertEqual(
-                    len(actual_signature),
-                    64,
-                    f"Signature length for {vector['name']}"
+                    len(actual_signature), 64, f"Signature length for {vector['name']}"
                 )
 
                 # Note: Ed25519 signatures are non-deterministic, so we verify instead
@@ -146,15 +137,13 @@ class TestHashAndSigParity(unittest.TestCase):
                 # Verify the golden signature is valid
                 is_valid = keypair.verify(actual_hash, expected_signature_bytes)
                 self.assertTrue(
-                    is_valid,
-                    f"Golden signature verification failed for {vector['name']}"
+                    is_valid, f"Golden signature verification failed for {vector['name']}"
                 )
 
                 # Verify our signature is valid
                 is_our_sig_valid = keypair.verify(actual_hash, actual_signature)
                 self.assertTrue(
-                    is_our_sig_valid,
-                    f"Our signature verification failed for {vector['name']}"
+                    is_our_sig_valid, f"Our signature verification failed for {vector['name']}"
                 )
 
     def test_transaction_hashing_parity(self):
@@ -163,14 +152,12 @@ class TestHashAndSigParity(unittest.TestCase):
         # Test with known transaction structure
         test_header = {
             "principal": "acc://alice.acme/book",
-            "initiator": "0123456789abcdef" * 4  # 32 bytes as hex
+            "initiator": "0123456789abcdef" * 4,  # 32 bytes as hex
         }
 
         test_body = {
             "type": "sendTokens",
-            "to": [
-                {"url": "acc://bob.acme/tokens", "amount": "1000"}
-            ]
+            "to": [{"url": "acc://bob.acme/tokens", "amount": "1000"}],
         }
 
         # Test hash generation
@@ -193,7 +180,7 @@ class TestHashAndSigParity(unittest.TestCase):
             "signer": "acc://test.acme/book/1",
             "signerVersion": 1,
             "timestamp": 1234567890,
-            "type": "ed25519"
+            "type": "ed25519",
         }
 
         # Test metadata hash generation
@@ -232,14 +219,11 @@ class TestHashAndSigParity(unittest.TestCase):
         keypair = Ed25519KeyPair.from_seed(private_key_bytes)
 
         # Create test transaction
-        header = {
-            "principal": "acc://test.acme/book",
-            "timestamp": 1234567890
-        }
+        header = {"principal": "acc://test.acme/book", "timestamp": 1234567890}
 
         body = {
             "type": "sendTokens",
-            "to": [{"url": "acc://recipient.acme/tokens", "amount": "500"}]
+            "to": [{"url": "acc://recipient.acme/tokens", "amount": "500"}],
         }
 
         # Step 1: Hash transaction
@@ -251,7 +235,7 @@ class TestHashAndSigParity(unittest.TestCase):
             "signer": "acc://test.acme/book/1",
             "signerVersion": 1,
             "timestamp": 1234567890,
-            "type": "ed25519"
+            "type": "ed25519",
         }
 
         # Step 3: Hash signature metadata
@@ -303,8 +287,12 @@ class TestHashAndSigParity(unittest.TestCase):
                 public_key_hex = sig["publicKey"]
                 signature_hex = sig["signature"]
 
-                self.assertEqual(len(public_key_hex), 64, "Public key should be 32 bytes (64 hex chars)")
-                self.assertEqual(len(signature_hex), 128, "Signature should be 64 bytes (128 hex chars)")
+                self.assertEqual(
+                    len(public_key_hex), 64, "Public key should be 32 bytes (64 hex chars)"
+                )
+                self.assertEqual(
+                    len(signature_hex), 128, "Signature should be 64 bytes (128 hex chars)"
+                )
 
                 # Test that hex is valid
                 try:
@@ -322,13 +310,13 @@ class TestHashAndSigParity(unittest.TestCase):
         header1 = {
             "principal": "acc://test.acme/book",
             "timestamp": 1234567890,
-            "initiator": "abcd" * 16
+            "initiator": "abcd" * 16,
         }
 
         header2 = {
             "timestamp": 1234567890,
             "initiator": "abcd" * 16,
-            "principal": "acc://test.acme/book"
+            "principal": "acc://test.acme/book",
         }
 
         body = {"type": "sendTokens", "to": []}
@@ -358,11 +346,7 @@ class TestHashAndSigParity(unittest.TestCase):
             "principal": "acc://test.acme/book",
             "timestamp": 1234567890,
             "nonce": 42,
-            "meta": {
-                "nested": True,
-                "array": [1, 2, 3],
-                "null_value": None
-            }
+            "meta": {"nested": True, "array": [1, 2, 3], "null_value": None},
         }
 
         complex_body = {
@@ -372,16 +356,18 @@ class TestHashAndSigParity(unittest.TestCase):
                 "fee": "10",
                 "recipients": [
                     {"url": "acc://alice.acme/tokens", "amount": "500"},
-                    {"url": "acc://bob.acme/tokens", "amount": "500"}
-                ]
-            }
+                    {"url": "acc://bob.acme/tokens", "amount": "500"},
+                ],
+            },
         }
 
         hash_complex = hash_transaction(complex_header, complex_body)
         self.assertEqual(len(hash_complex), 32, "Hash of complex transaction should be 32 bytes")
 
         # Should be different from empty hash
-        self.assertNotEqual(hash_empty, hash_complex, "Different transactions should have different hashes")
+        self.assertNotEqual(
+            hash_empty, hash_complex, "Different transactions should have different hashes"
+        )
 
     def test_sig_ed25519_golden_fixture(self):
         """Test against sig_ed25519.golden.json fixture"""
@@ -463,10 +449,7 @@ class TestHashAndSigParity(unittest.TestCase):
                 signature_bytes = bytes.fromhex(sig["signature"])
 
                 # Create signature metadata (minimal version for testing)
-                signature_metadata = {
-                    "publicKey": sig["publicKey"],
-                    "type": "ed25519"
-                }
+                signature_metadata = {"publicKey": sig["publicKey"], "type": "ed25519"}
 
                 # Add optional fields if present
                 for field in ["signer", "signerVersion", "timestamp"]:
@@ -481,12 +464,15 @@ class TestHashAndSigParity(unittest.TestCase):
 
                 # Verify signature
                 from src.accumulate_client.crypto.ed25519 import verify_ed25519
+
                 is_valid = verify_ed25519(public_key_bytes, signature_bytes, signing_preimage)
 
                 # Note: This may fail if the envelope was signed with a different preimage construction
                 # The test verifies our implementation produces valid signatures, not that they match
                 # the exact envelope signatures (which may use different metadata)
-                print(f"Signature verification for envelope signature: {'PASS' if is_valid else 'FAIL'}")
+                print(
+                    f"Signature verification for envelope signature: {'PASS' if is_valid else 'FAIL'}"
+                )
 
             except Exception as e:
                 print(f"Error verifying envelope signature: {e}")

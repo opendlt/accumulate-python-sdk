@@ -2,11 +2,10 @@
 
 """Basic unit tests for AccumulateClient"""
 
-import json
 import unittest
 from unittest.mock import Mock, patch
+
 from accumulate_client import AccumulateClient
-from accumulate_client.json_rpc_client import JsonRpcException
 
 
 class TestAccumulateClientBasic(unittest.TestCase):
@@ -25,17 +24,13 @@ class TestAccumulateClientBasic(unittest.TestCase):
         self.assertEqual(self.client.server_url, "http://localhost:26660/v2")
         self.assertIsNotNone(self.client.session)
 
-    @patch('requests.Session.post')
+    @patch("requests.Session.post")
     def test_successful_rpc_call(self, mock_post):
         """Test successful JSON-RPC call"""
         # Mock successful response
         mock_response = Mock()
         mock_response.raise_for_status.return_value = None
-        mock_response.json.return_value = {
-            "jsonrpc": "2.0",
-            "result": {"version": "test"},
-            "id": 1
-        }
+        mock_response.json.return_value = {"jsonrpc": "2.0", "result": {"version": "test"}, "id": 1}
         mock_post.return_value = mock_response
 
         # Make call
@@ -50,7 +45,7 @@ class TestAccumulateClientBasic(unittest.TestCase):
         # Verify result
         self.assertEqual(result, {"version": "test"})
 
-    @patch('requests.Session.post')
+    @patch("requests.Session.post")
     def test_rpc_error_response(self, mock_post):
         """Test JSON-RPC error response handling"""
         # Mock error response
@@ -58,11 +53,8 @@ class TestAccumulateClientBasic(unittest.TestCase):
         mock_response.raise_for_status.return_value = None
         mock_response.json.return_value = {
             "jsonrpc": "2.0",
-            "error": {
-                "code": -32600,
-                "message": "Invalid request"
-            },
-            "id": 1
+            "error": {"code": -32600, "message": "Invalid request"},
+            "id": 1,
         }
         mock_post.return_value = mock_response
 
@@ -72,7 +64,7 @@ class TestAccumulateClientBasic(unittest.TestCase):
 
         self.assertIn("Invalid request", str(context.exception))
 
-    @patch('requests.Session.post')
+    @patch("requests.Session.post")
     def test_describe_method(self, mock_post):
         """Test describe method"""
         # Mock response
@@ -80,11 +72,8 @@ class TestAccumulateClientBasic(unittest.TestCase):
         mock_response.raise_for_status.return_value = None
         mock_response.json.return_value = {
             "jsonrpc": "2.0",
-            "result": {
-                "version": "1.0.0",
-                "network": "DevNet"
-            },
-            "id": 1
+            "result": {"version": "1.0.0", "network": "DevNet"},
+            "id": 1,
         }
         mock_post.return_value = mock_response
 
@@ -99,7 +88,7 @@ class TestAccumulateClientBasic(unittest.TestCase):
         self.assertEqual(result["version"], "1.0.0")
         self.assertEqual(result["network"], "DevNet")
 
-    @patch('requests.Session.post')
+    @patch("requests.Session.post")
     def test_faucet_method(self, mock_post):
         """Test faucet method"""
         # Mock response
@@ -107,11 +96,8 @@ class TestAccumulateClientBasic(unittest.TestCase):
         mock_response.raise_for_status.return_value = None
         mock_response.json.return_value = {
             "jsonrpc": "2.0",
-            "result": {
-                "transactionHash": "abc123",
-                "txid": "abc123"
-            },
-            "id": 1
+            "result": {"transactionHash": "abc123", "txid": "abc123"},
+            "id": 1,
         }
         mock_post.return_value = mock_response
 
@@ -134,10 +120,10 @@ class TestAccumulateClientBasic(unittest.TestCase):
     def test_method_availability(self):
         """Test that expected methods are available"""
         # Check that key methods exist
-        self.assertTrue(hasattr(self.client, 'describe'))
-        self.assertTrue(hasattr(self.client, 'faucet'))
-        self.assertTrue(hasattr(self.client, 'call'))
-        self.assertTrue(hasattr(self.client, 'close'))
+        self.assertTrue(hasattr(self.client, "describe"))
+        self.assertTrue(hasattr(self.client, "faucet"))
+        self.assertTrue(hasattr(self.client, "call"))
+        self.assertTrue(hasattr(self.client, "close"))
 
         # Check methods are callable
         self.assertTrue(callable(self.client.describe))

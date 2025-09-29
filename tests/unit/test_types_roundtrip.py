@@ -2,15 +2,13 @@
 
 """Unit tests for types.py imports and basic type functionality"""
 
-import pytest
+import base64
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Optional, List, Dict, Any, Union
-from dataclasses import dataclass, field
-import base64
+from typing import Any, Dict, List, Optional, Union
 
 # Import all modules from types.py to ensure they're covered
-import accumulate_client.types
 
 
 class TestTypesImports:
@@ -38,6 +36,7 @@ class TestTypesImports:
 
     def test_enum_import(self):
         """Test enum functionality"""
+
         # Test that Enum import works
         class TestEnum(Enum):
             VALUE1 = "test1"
@@ -49,6 +48,7 @@ class TestTypesImports:
 
     def test_typing_imports(self):
         """Test typing module functionality"""
+
         # Test Optional
         def process_optional(value: Optional[str] = None) -> str:
             return value or "default"
@@ -75,6 +75,7 @@ class TestTypesImports:
 
     def test_dataclass_functionality(self):
         """Test dataclass functionality"""
+
         # Test dataclass creation
         @dataclass
         class TestDataClass:
@@ -96,6 +97,7 @@ class TestTypesImports:
 
     def test_complex_type_combinations(self):
         """Test complex combinations of imported types"""
+
         # Test complex dataclass with various types
         @dataclass
         class ComplexDataClass:
@@ -126,6 +128,7 @@ class TestTypesImports:
 
     def test_enum_with_dataclass(self):
         """Test enum combined with dataclass"""
+
         class Status(Enum):
             PENDING = "pending"
             ACTIVE = "active"
@@ -152,7 +155,7 @@ class TestTypesImports:
             b"hello",
             b"Hello, World!",
             b"This is a test with special chars: !@#$%^&*()",
-            bytes(range(256))  # All possible byte values
+            bytes(range(256)),  # All possible byte values
         ]
 
         for original in test_cases:
@@ -176,29 +179,28 @@ class TestTypesImports:
 
     def test_typing_annotations(self):
         """Test that typing annotations work correctly"""
+
         # Test function with complex annotations
         def process_data(
             items: List[Dict[str, Any]],
             filter_func: Optional[callable] = None,
-            metadata: Dict[str, Union[str, int]] = None
+            metadata: Dict[str, Union[str, int]] = None,
         ) -> Dict[str, Any]:
             if metadata is None:
                 metadata = {}
 
-            processed = items.copy() if filter_func is None else [
-                item for item in items if filter_func(item)
-            ]
+            processed = (
+                items.copy()
+                if filter_func is None
+                else [item for item in items if filter_func(item)]
+            )
 
-            return {
-                "items": processed,
-                "count": len(processed),
-                "metadata": metadata
-            }
+            return {"items": processed, "count": len(processed), "metadata": metadata}
 
         test_items = [
             {"id": 1, "name": "item1"},
             {"id": 2, "name": "item2"},
-            {"id": 3, "name": "item3"}
+            {"id": 3, "name": "item3"},
         ]
 
         result = process_data(test_items)
@@ -207,9 +209,7 @@ class TestTypesImports:
 
         # With filter
         result_filtered = process_data(
-            test_items,
-            lambda x: x["id"] > 1,
-            {"source": "test", "version": 1}
+            test_items, lambda x: x["id"] > 1, {"source": "test", "version": 1}
         )
         assert result_filtered["count"] == 2
         assert result_filtered["metadata"]["source"] == "test"
@@ -221,20 +221,24 @@ class TestTypesImports:
         import accumulate_client.types as types_module
 
         # The module should exist and have the expected docstring
-        assert hasattr(types_module, '__doc__')
+        assert hasattr(types_module, "__doc__")
         assert "Type definitions for Accumulate API" in types_module.__doc__
 
     def test_all_imports_accessible(self):
         """Test that all imports from types.py are accessible"""
         # Import the module and verify all expected attributes exist
-        import accumulate_client.types as types_module
 
         # These should all be accessible after import
         import base64 as b64
+        from dataclasses import dataclass as dc
+        from dataclasses import field as f
         from datetime import datetime as dt
         from enum import Enum as En
-        from typing import Optional as Opt, List as L, Dict as D, Any as A, Union as U
-        from dataclasses import dataclass as dc, field as f
+        from typing import Any as A
+        from typing import Dict as D
+        from typing import List as L
+        from typing import Optional as Opt
+        from typing import Union as U
 
         # Verify they are the same objects
         assert b64 is base64
