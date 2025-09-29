@@ -198,12 +198,39 @@ pytest
 pytest tests/unit/           # Unit tests (mocked)
 pytest tests/conformance/    # TS SDK compatibility tests
 pytest tests/integration/    # DevNet integration tests
+pytest tests/fuzz/           # Fuzz testing with random vectors
 
 # Run with options
 pytest -v                    # Verbose output
 pytest -q                    # Quiet output
 pytest --tb=short           # Short traceback format
 ```
+
+### Fuzz Testing
+
+The SDK includes comprehensive fuzz testing to ensure compatibility across all transaction types and edge cases:
+
+```bash
+# Generate fuzz test vectors (200 by default)
+python tools/generate_fuzz_vectors.py > tests/golden/fuzz_vectors.jsonl
+python tools/generate_fuzz_vectors.py 500 > tests/golden/fuzz_vectors.jsonl
+
+# Run fuzz tests
+pytest tests/fuzz/test_fuzz_roundtrip_from_dart.py -v
+
+# Individual fuzz test categories
+pytest tests/fuzz/test_fuzz_roundtrip_from_dart.py::TestFuzzRoundtripFromDart::test_fuzz_canonical_json_parity -v
+pytest tests/fuzz/test_fuzz_roundtrip_from_dart.py::TestFuzzRoundtripFromDart::test_fuzz_transaction_hash_parity -v
+pytest tests/fuzz/test_fuzz_roundtrip_from_dart.py::TestFuzzRoundtripFromDart::test_fuzz_roundtrip_encoding -v
+```
+
+Fuzz testing validates:
+- **Canonical JSON Parity**: Python canonical JSON matches reference implementations
+- **Transaction Hash Parity**: Transaction hashes match byte-for-byte across SDKs
+- **Roundtrip Encoding**: Decode → encode cycles produce identical bytes
+- **Transaction Type Coverage**: All transaction types (sendTokens, addCredits, etc.) are tested
+- **Field Variety**: Edge cases like empty memos, multi-recipients, etc.
+- **Large Vector Stress**: Performance and correctness with large transactions
 
 ## Development
 
@@ -258,6 +285,8 @@ unified/
 │   └── types.py                    # API type definitions
 ├── tool/
 │   └── devnet_discovery.py         # DevNet endpoint discovery
+├── tools/
+│   └── generate_fuzz_vectors.py    # Fuzz test vector generator
 ├── examples/                       # Usage examples
 │   ├── 100_keygen_lite_urls.py     # Key generation and URL derivation
 │   ├── 120_faucet_local_devnet.py  # Faucet funding
@@ -267,6 +296,7 @@ unified/
 │   ├── unit/                       # Unit tests with mocks
 │   ├── conformance/                # TypeScript SDK compatibility
 │   ├── integration/                # DevNet integration tests
+│   ├── fuzz/                       # Comprehensive fuzz testing
 │   └── golden/                     # Test fixtures and golden values
 ├── tooling/templates/              # Code generation templates
 ├── pyproject.toml                  # Package configuration
