@@ -1,0 +1,38 @@
+{
+  "ed25519_key_generation": [
+    {
+      "description": "Zero private key test vector from TS tests",
+      "private_key_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+      "expected_public_key_hex": "3b6a27bcceb6a42d62a3a8d02a6f0d73653215771de243a63ac048a18b59da29"
+    }
+  ],
+  "lite_identity_derivation": [
+    {
+      "description": "Lite identity URL derivation test vector from TS tests",
+      "seed_hex": "a362b69a6cda241bf6b949faffb3bffbf1a47291373590660644f5c572feae72",
+      "expected_url_pattern": "^acc:\\/\\/[0-9a-f]{40}[0-9a-f]{8}$"
+    }
+  ],
+  "address_fixtures": {
+    "public_keys": {
+      "AC": {
+        "address": "AC12jWw3iqvdCqg11QTLFK9qdgABjknGUnLuX2sLiJMokWcAnqXFk",
+        "pubHash": "e43be90e349210456662d8b8bdc9cc9e5e46ccb07f2129e7b57a8195e5e916d5",
+        "type": "ed25519"
+      },
+      "FA": {
+        "address": "FA3hbVKd8MxyVhTqn7RwoWb2PXTiAbfhEbDSFCmTcmPYuQ8PdRGe",
+        "pubHash": "e43be90e349210456662d8b8bdc9cc9e5e46ccb07f2129e7b57a8195e5e916d5",
+        "type": "rcd1"
+      }
+    },
+    "private_keys": {
+      "AS": {
+        "address": "AS12jWw3iqvdCqg11QTLFK9qdgABjknGUnLuX2sLiJMokWcBq53Ux",
+        "seed": "e43be90e349210456662d8b8bdc9cc9e5e46ccb07f2129e7b57a8195e5e916d5",
+        "pubKey": "52813dbcd9e54c8bf504e83b3461355df1f8ed2f2e466c7f30dfd32ce7dbe79e",
+        "type": "ed25519"
+      }
+    }
+  }
+}
