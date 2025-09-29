@@ -16,13 +16,9 @@ from cryptography.hazmat.primitives import serialization
 
 def canonical_json(obj: Any) -> str:
     """
-    Canonical JSON serialization to match TS SDK behavior.
+    Canonical JSON serialization to match Dart/TS SDK behavior exactly.
 
-    Rules:
-    - Keys are sorted alphabetically
-    - No extra whitespace
-    - Consistent number formatting
-    - Null values preserved
+    Uses the dedicated canonical JSON module for perfect cross-language compatibility.
 
     Args:
         obj: Object to serialize
@@ -30,7 +26,9 @@ def canonical_json(obj: Any) -> str:
     Returns:
         Canonical JSON string
     """
-    return json.dumps(obj, separators=(',', ':'), sort_keys=True, ensure_ascii=False)
+    # Import here to avoid circular imports
+    from src.accumulate_client.canonjson import dumps_canonical
+    return dumps_canonical(obj)
 
 
 def sha256_hash(data: Union[str, bytes]) -> bytes:

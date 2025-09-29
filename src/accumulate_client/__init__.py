@@ -4,5 +4,18 @@
 
 from .client import AccumulateClient
 
-__all__ = ['AccumulateClient']
+# Binary codec for bit-for-bit parity with Dart SDK
+from .codec import BinaryWriter, BinaryReader, TransactionCodec, sha256_bytes
+
+# Canonical JSON for cross-language hash stability
+from .canonjson import dumps_canonical
+
+__all__ = [
+    'AccumulateClient',
+    'BinaryWriter',
+    'BinaryReader',
+    'TransactionCodec',
+    'sha256_bytes',
+    'dumps_canonical'
+]
 __version__ = '0.1.0'
