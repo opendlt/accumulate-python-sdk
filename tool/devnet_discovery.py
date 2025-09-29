@@ -106,6 +106,25 @@ def test_connectivity(config: Dict[str, str]) -> None:
         print(f'[ERROR] V2 endpoint test failed: {e}')
 
 
+def write_env_local(config: Dict[str, str]) -> None:
+    """Write .env.local file to unified/ directory"""
+    # Get the unified directory path (parent of tool directory)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    unified_dir = os.path.dirname(script_dir)
+    env_local_path = os.path.join(unified_dir, '.env.local')
+
+    try:
+        with open(env_local_path, 'w') as f:
+            f.write("# Auto-generated DevNet configuration\n")
+            f.write(f"# Generated at: {os.popen('date /t & time /t').read().strip()}\n\n")
+            for key, value in config.items():
+                f.write(f"{key}={value}\n")
+
+        print(f'\n[OK] Wrote configuration to: {env_local_path}')
+    except Exception as e:
+        print(f'[ERROR] Failed to write .env.local: {e}')
+
+
 def main():
     """Main entry point"""
     devnet_dir = sys.argv[1] if len(sys.argv) > 1 else r'C:\Accumulate_Stuff\devnet-accumulate-instance'
@@ -117,6 +136,9 @@ def main():
     print('\n=== DevNet Configuration ===')
     for key, value in config.items():
         print(f'{key}={value}')
+
+    # Write .env.local file
+    write_env_local(config)
 
     print('\n=== Export Commands (Bash) ===')
     for key, value in config.items():
