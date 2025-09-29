@@ -1,0 +1,15 @@
+{
+  "header": {
+    "principal": "acc://alice.acme/tokens",
+    "timestamp": 1234567890123456
+  },
+  "body": {
+    "type": "sendTokens",
+    "to": [
+      {
+        "url": "acc://bob.acme/tokens",
+        "amount": "1000000"
+      }
+    ]
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "description": "Transaction signing test vectors for TS-Python parity",
+  "vectors": [
+    {
+      "name": "zero_private_key",
+      "description": "Zero private key test vector from TS tests",
+      "privateKey": "0000000000000000000000000000000000000000000000000000000000000000",
+      "publicKey": "3b6a27bcceb6a42d62a3a8d02a6f0d73653215771de243a63ac048a18b59da29",
+      "lid": "acc://139e3940e64b5491722088d9a0d741628fc826e0a80337ad",
+      "lta": "acc://139e3940e64b5491722088d9a0d741628fc826e0a80337ad/ACME",
+      "testMessage": "test message",
+      "expectedSignatureLength": 64
+    },
+    {
+      "name": "known_seed",
+      "description": "Known seed test vector from TS tests",
+      "privateKey": "a362b69a6cda241bf6b949faffb3bffbf1a47291373590660644f5c572feae72",
+      "publicKey": "a76a381a6d309bab40b78fed04522261a7f729527245cc9f3e94012456140dd3",
+      "lid": "acc://105251bb367baa372c748930531ae63d6e143c9aa4470eff",
+      "lta": "acc://105251bb367baa372c748930531ae63d6e143c9aa4470eff/ACME",
+      "testMessage": "test message",
+      "expectedSignatureLength": 64
+    },
+    {
+      "name": "test_signing",
+      "description": "Test signing vector",
+      "privateKey": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+      "publicKey": "5cceaad9c202c236cd8c977290a844e3f2f0a15a9b3189220dbe0f9121eb0cd2",
+      "lid": "acc://e0cfdc239dbe6e1929ee5a99d230682b3cf5498fe115b24d",
+      "lta": "acc://e0cfdc239dbe6e1929ee5a99d230682b3cf5498fe115b24d/ACME",
+      "testMessage": "74657374206d657373616765",
+      "signature": "ba72b5680575f9959f76f3df1dba27210e924ab02c74193dd7db647fad59b29d3e8c550432f5fed26ea0e08499e926314e132a6b0d86ccd3aae28dfe11a0c909",
+      "messageHash": "3f0a377ba0a4a460ecb616f6507ce0d8cfa3e704025d4fda3ed0c5ca05468728"
+    }
+  ]
+}

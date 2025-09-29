@@ -1,0 +1,193 @@
+{
+  "description": "Golden test fixtures extracted from TypeScript SDK patterns",
+  "generatedAt": "2025-09-29T00:29:45.632Z",
+  "ed25519_vectors": [
+    {
+      "name": "zero_private_key",
+      "description": "Zero private key test vector from TS tests",
+      "privateKey": "0000000000000000000000000000000000000000000000000000000000000000",
+      "publicKey": "3b6a27bcceb6a42d62a3a8d02a6f0d73653215771de243a63ac048a18b59da29",
+      "lid": "acc://139e3940e64b5491722088d9a0d741628fc826e0a80337ad",
+      "lta": "acc://139e3940e64b5491722088d9a0d741628fc826e0a80337ad/ACME",
+      "testMessage": "test message",
+      "expectedSignatureLength": 64
+    },
+    {
+      "name": "known_seed",
+      "description": "Known seed test vector from TS tests",
+      "privateKey": "a362b69a6cda241bf6b949faffb3bffbf1a47291373590660644f5c572feae72",
+      "publicKey": "a76a381a6d309bab40b78fed04522261a7f729527245cc9f3e94012456140dd3",
+      "lid": "acc://105251bb367baa372c748930531ae63d6e143c9aa4470eff",
+      "lta": "acc://105251bb367baa372c748930531ae63d6e143c9aa4470eff/ACME",
+      "testMessage": "test message",
+      "expectedSignatureLength": 64
+    },
+    {
+      "name": "test_signing",
+      "description": "Test signing vector",
+      "privateKey": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+      "publicKey": "5cceaad9c202c236cd8c977290a844e3f2f0a15a9b3189220dbe0f9121eb0cd2",
+      "lid": "acc://e0cfdc239dbe6e1929ee5a99d230682b3cf5498fe115b24d",
+      "lta": "acc://e0cfdc239dbe6e1929ee5a99d230682b3cf5498fe115b24d/ACME",
+      "testMessage": "74657374206d657373616765",
+      "signature": "ba72b5680575f9959f76f3df1dba27210e924ab02c74193dd7db647fad59b29d3e8c550432f5fed26ea0e08499e926314e132a6b0d86ccd3aae28dfe11a0c909",
+      "messageHash": "3f0a377ba0a4a460ecb616f6507ce0d8cfa3e704025d4fda3ed0c5ca05468728"
+    }
+  ],
+  "transaction_vectors": [
+    {
+      "name": "send_tokens_simple",
+      "description": "Simple send tokens transaction",
+      "transaction": {
+        "header": {
+          "principal": "acc://alice.acme/tokens",
+          "timestamp": 1234567890123456
+        },
+        "body": {
+          "type": "sendTokens",
+          "to": [
+            {
+              "url": "acc://bob.acme/tokens",
+              "amount": "1000000"
+            }
+          ]
+        }
+      },
+      "canonicalJSON": "{\"body\":{\"to\":[{\"amount\":\"1000000\",\"url\":\"acc://bob.acme/tokens\"}],\"type\":\"sendTokens\"},\"header\":{\"principal\":\"acc://alice.acme/tokens\",\"timestamp\":1234567890123456}}",
+      "hash": "32a2c91cd52c527b88f2a158f7698cd5d551fd08c3168d1d1dbd0825eb9f7d79"
+    },
+    {
+      "name": "add_credits",
+      "description": "Add credits transaction",
+      "transaction": {
+        "header": {
+          "principal": "acc://25e8e0d2ac56a79a2384d9662dcddfe59a92ee0ae77fbd1e/ACME",
+          "timestamp": 1234567890123456
+        },
+        "body": {
+          "type": "addCredits",
+          "recipient": {
+            "url": "acc://25e8e0d2ac56a79a2384d9662dcddfe59a92ee0ae77fbd1e"
+          },
+          "amount": "1000000"
+        }
+      },
+      "canonicalJSON": "{\"body\":{\"amount\":\"1000000\",\"recipient\":{\"url\":\"acc://25e8e0d2ac56a79a2384d9662dcddfe59a92ee0ae77fbd1e\"},\"type\":\"addCredits\"},\"header\":{\"principal\":\"acc://25e8e0d2ac56a79a2384d9662dcddfe59a92ee0ae77fbd1e/ACME\",\"timestamp\":1234567890123456}}",
+      "hash": "bf6d8e06b5415af1afb01ce65188d81f6c035003cd41eb3bce835f239cf29816"
+    }
+  ],
+  "envelope_vectors": [
+    {
+      "name": "simple_envelope",
+      "description": "Simple transaction envelope with Ed25519 signature",
+      "envelope": {
+        "transaction": {
+          "header": {
+            "principal": "acc://test.acme/tokens",
+            "timestamp": 1640995200000000
+          },
+          "body": {
+            "type": "sendTokens",
+            "to": [
+              {
+                "url": "acc://recipient.acme/tokens",
+                "amount": "500000"
+              }
+            ]
+          }
+        },
+        "signatures": [
+          {
+            "type": "ed25519",
+            "publicKey": "207a067892821e25d770f1fba0c47c11ff4b813e54162ece9eb839e076231ab6",
+            "signature": "25d69fc15f04d7fc4b5ae548be3a696dead325ee4562a65ec2d128f1a546458fc807688d9d3e532d9cadec7e9c446833de0ace47bfd5dee9621cce2b0ef2bd0d"
+          }
+        ]
+      },
+      "transactionJSON": "{\"body\":{\"to\":[{\"amount\":\"500000\",\"url\":\"acc://recipient.acme/tokens\"}],\"type\":\"sendTokens\"},\"header\":{\"principal\":\"acc://test.acme/tokens\",\"timestamp\":1640995200000000}}",
+      "transactionHash": "632bb969341f10e6b5648a5602c7c8799dcdd05bb81153b5dc3fa8808146ac29",
+      "canonicalEnvelopeJSON": "{\"signatures\":[{\"publicKey\":\"207a067892821e25d770f1fba0c47c11ff4b813e54162ece9eb839e076231ab6\",\"signature\":\"25d69fc15f04d7fc4b5ae548be3a696dead325ee4562a65ec2d128f1a546458fc807688d9d3e532d9cadec7e9c446833de0ace47bfd5dee9621cce2b0ef2bd0d\",\"type\":\"ed25519\"}],\"transaction\":{\"body\":{\"to\":[{\"amount\":\"500000\",\"url\":\"acc://recipient.acme/tokens\"}],\"type\":\"sendTokens\"},\"header\":{\"principal\":\"acc://test.acme/tokens\",\"timestamp\":1640995200000000}}}"
+    }
+  ],
+  "hashing_vectors": [
+    {
+      "name": "sha256_test_1",
+      "description": "SHA-256 test case 1",
+      "input": "",
+      "inputHex": "",
+      "expectedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "actualHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "sha256_test_2",
+      "description": "SHA-256 test case 2",
+      "input": "abc",
+      "inputHex": "616263",
+      "expectedHash": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+      "actualHash": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    },
+    {
+      "name": "sha256_test_3",
+      "description": "SHA-256 test case 3",
+      "input": "test data",
+      "inputHex": "746573742064617461",
+      "expectedHash": "916f0027a575074ce72a331777c3478d6513f786a591bd892da1a577bf2335f9",
+      "actualHash": "916f0027a575074ce72a331777c3478d6513f786a591bd892da1a577bf2335f9"
+    },
+    {
+      "name": "sha256_test_4",
+      "description": "SHA-256 test case 4",
+      "input": "{\"a\":1,\"b\":2}",
+      "inputHex": "7b2261223a312c2262223a327d",
+      "expectedHash": "43258cff783fe7036d8a43033f830adfc60ec037382473548ac742b888292777",
+      "actualHash": "43258cff783fe7036d8a43033f830adfc60ec037382473548ac742b888292777"
+    }
+  ],
+  "canonical_json_vectors": [
+    {
+      "name": "simple_object",
+      "description": "Canonical JSON test: simple_object",
+      "input": {
+        "b": 2,
+        "a": 1,
+        "c": 3
+      },
+      "expectedJSON": "{\"a\":1,\"b\":2,\"c\":3}",
+      "actualJSON": "{\"a\":1,\"b\":2,\"c\":3}"
+    },
+    {
+      "name": "nested_object",
+      "description": "Canonical JSON test: nested_object",
+      "input": {
+        "z": {
+          "y": 2,
+          "x": 1
+        },
+        "a": [
+          3,
+          1,
+          2
+        ],
+        "m": "test"
+      },
+      "expectedJSON": "{\"a\":[3,1,2],\"m\":\"test\",\"z\":{\"x\":1,\"y\":2}}",
+      "actualJSON": "{\"a\":[3,1,2],\"m\":\"test\",\"z\":{\"x\":1,\"y\":2}}"
+    },
+    {
+      "name": "transaction_like",
+      "description": "Canonical JSON test: transaction_like",
+      "input": {
+        "body": {
+          "type": "sendTokens",
+          "to": []
+        },
+        "header": {
+          "principal": "acc://test",
+          "timestamp": 123
+        }
+      },
+      "expectedJSON": "{\"body\":{\"to\":[],\"type\":\"sendTokens\"},\"header\":{\"principal\":\"acc://test\",\"timestamp\":123}}",
+      "actualJSON": "{\"body\":{\"to\":[],\"type\":\"sendTokens\"},\"header\":{\"principal\":\"acc://test\",\"timestamp\":123}}"
+    }
+  ]
+}

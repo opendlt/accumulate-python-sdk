@@ -1,0 +1,24 @@
+{
+  "transaction": {
+    "header": {
+      "principal": "acc://test.acme/tokens",
+      "timestamp": 1640995200000000
+    },
+    "body": {
+      "type": "sendTokens",
+      "to": [
+        {
+          "url": "acc://recipient.acme/tokens",
+          "amount": "500000"
+        }
+      ]
+    }
+  },
+  "signatures": [
+    {
+      "type": "ed25519",
+      "publicKey": "207a067892821e25d770f1fba0c47c11ff4b813e54162ece9eb839e076231ab6",
+      "signature": "25d69fc15f04d7fc4b5ae548be3a696dead325ee4562a65ec2d128f1a546458fc807688d9d3e532d9cadec7e9c446833de0ace47bfd5dee9621cce2b0ef2bd0d"
+    }
+  ]
+}
