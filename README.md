@@ -232,6 +232,41 @@ Fuzz testing validates:
 - **Field Variety**: Edge cases like empty memos, multi-recipients, etc.
 - **Large Vector Stress**: Performance and correctness with large transactions
 
+## Parity Gate
+
+### One-Command Validation
+
+Validate complete parity with Dart/TypeScript SDKs using a single command:
+
+```powershell
+# Run comprehensive parity validation
+.\scripts\run_parity_gate.ps1
+
+# Expected output on success:
+# 🟢 PARITY LOCKED: binary, canonical JSON, hashes, signatures, roundtrip = OK
+#
+# 📈 VALIDATION SUMMARY:
+#    • Golden test vectors: 15+
+#    • Fuzz test vectors: 200
+#    • Binary parity tests: 13 passed
+#    • Hash/signature tests: 12 passed
+#    • Total test suite: 81 passed
+#    • Code coverage: 70%
+#    • Type coverage: 23 types validated
+```
+
+### What the Parity Gate Validates
+
+- **Binary Codec Parity**: Byte-for-byte compatibility with Dart BinaryWriter/Reader
+- **Canonical JSON**: Identical hash output across Python/Dart/TypeScript
+- **Ed25519 Signatures**: Cross-platform signature generation and verification
+- **Transaction Hashing**: Matching transaction hash computation
+- **Type Coverage**: All protocol types have marshal/unmarshal tests
+- **Fuzz Testing**: 200+ random transaction roundtrip validations
+- **Code Quality**: Zero TODOs, stubs, or incomplete implementations
+
+The parity gate generates a comprehensive `FINAL_PARITY_REPORT.md` with detailed results.
+
 ## Development
 
 ### Prerequisites
@@ -239,6 +274,7 @@ Fuzz testing validates:
 - Python 3.8+
 - DevNet running locally (for integration tests)
 - Go toolchain (for code regeneration)
+- PowerShell (for parity gate script)
 
 ### Development Setup
 
