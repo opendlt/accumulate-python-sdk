@@ -240,9 +240,10 @@ class TransactionCodec:
         Returns:
             Transaction hash for signing (32 bytes)
         """
-        # Encode header and body to canonical binary format using Dart-compatible canonical JSON
-        header_json = dumps_canonical(header).encode('utf-8')
-        body_json = dumps_canonical(body).encode('utf-8')
+        # Encode header and body to canonical binary format exactly as Dart TransactionCodec
+        # Dart uses jsonEncode() which should match our canonical JSON, but let's be explicit
+        header_json = json.dumps(header, separators=(',', ':'), sort_keys=True).encode('utf-8')
+        body_json = json.dumps(body, separators=(',', ':'), sort_keys=True).encode('utf-8')
 
         header_bytes = AccumulateCodec.bytes_marshal_binary(header_json)
         body_bytes = AccumulateCodec.bytes_marshal_binary(body_json)
