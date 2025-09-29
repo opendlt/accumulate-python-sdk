@@ -13,7 +13,7 @@ Ensures production-ready code with no placeholder implementations.
 import os
 import re
 import unittest
-from typing import List, Tuple, Set
+from typing import List, Tuple
 
 
 class TestNoTodosAndStubs(unittest.TestCase):
@@ -32,7 +32,7 @@ class TestNoTodosAndStubs(unittest.TestCase):
             ".pytest_cache",
             ".git",
             ".venv",
-            "node_modules"
+            "node_modules",
         }
 
         self.skip_files = {
@@ -41,17 +41,17 @@ class TestNoTodosAndStubs(unittest.TestCase):
 
         # Patterns that indicate TODOs or stubs
         self.todo_patterns = [
-            r'\b(TODO|FIXME|XXX|TBD|HACK)\b',
-            r'#.*\b(TODO|FIXME|XXX|TBD|HACK)\b',
+            r"\b(TODO|FIXME|XXX|TBD|HACK)\b",
+            r"#.*\b(TODO|FIXME|XXX|TBD|HACK)\b",
         ]
 
         self.stub_patterns = [
-            r'pass\s*#.*TODO',
-            r'pass\s*#.*FIXME',
-            r'raise\s+NotImplementedError',
-            r'assert\s+False\s*(?:#.*)?$',
-            r'return\s+None\s*#.*TODO',
-            r'return\s+None\s*#.*FIXME',
+            r"pass\s*#.*TODO",
+            r"pass\s*#.*FIXME",
+            r"raise\s+NotImplementedError",
+            r"assert\s+False\s*(?:#.*)?$",
+            r"return\s+None\s*#.*TODO",
+            r"return\s+None\s*#.*FIXME",
         ]
 
     def get_python_files(self, root_dir: str) -> List[str]:
@@ -71,7 +71,7 @@ class TestNoTodosAndStubs(unittest.TestCase):
                 continue
 
             for file in files:
-                if file.endswith('.py') and file not in self.skip_files:
+                if file.endswith(".py") and file not in self.skip_files:
                     python_files.append(os.path.join(root, file))
 
         return python_files
@@ -81,12 +81,12 @@ class TestNoTodosAndStubs(unittest.TestCase):
         matches = []
 
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding="utf-8") as f:
                 for line_num, line in enumerate(f, 1):
                     line_stripped = line.strip()
 
                     # Skip empty lines and pure comments
-                    if not line_stripped or line_stripped.startswith('#'):
+                    if not line_stripped or line_stripped.startswith("#"):
                         continue
 
                     for pattern in patterns:
@@ -94,7 +94,7 @@ class TestNoTodosAndStubs(unittest.TestCase):
                             matches.append((line_num, line_stripped))
                             break  # Only record one match per line
 
-        except (UnicodeDecodeError, PermissionError) as e:
+        except (UnicodeDecodeError, PermissionError):
             # Skip files we can't read
             pass
 
@@ -151,9 +151,10 @@ class TestNoTodosAndStubs(unittest.TestCase):
         python_files = self.get_python_files(self.src_root)
 
         self.assertGreater(
-            len(python_files), 5,
+            len(python_files),
+            5,
             f"Expected to find multiple Python files in {self.src_root}, "
-            f"but only found {len(python_files)}. Check scan configuration."
+            f"but only found {len(python_files)}. Check scan configuration.",
         )
 
         # Verify we're scanning the right modules
