@@ -1,0 +1,492 @@
+{
+  "generated_at": "2025-09-29T12:00:00Z",
+  "package": "accumulate_client",
+  "summary": {
+    "classes": 17,
+    "dataclasses": 0,
+    "enums": 1,
+    "serializable_types": 1,
+    "total_types": 23
+  },
+  "types": {
+    "accumulate_client.AccumulateClient": {
+      "fields": [
+        {
+          "default": null,
+          "name": "server_url",
+          "required": true,
+          "type": "<class 'str'>"
+        }
+      ],
+      "is_serializable": false,
+      "methods": [],
+      "module": "accumulate_client.client",
+      "name": "AccumulateClient",
+      "type_category": "class"
+    },
+    "accumulate_client.BinaryReader": {
+      "fields": [
+        {
+          "default": null,
+          "name": "buf",
+          "required": true,
+          "type": "<class 'bytes'>"
+        }
+      ],
+      "is_serializable": false,
+      "methods": [],
+      "module": "accumulate_client.codec.reader",
+      "name": "BinaryReader",
+      "type_category": "class"
+    },
+    "accumulate_client.BinaryWriter": {
+      "fields": [],
+      "is_serializable": false,
+      "methods": [
+        {
+          "is_classmethod": false,
+          "is_staticmethod": false,
+          "name": "to_bytes",
+          "signature": "(self) -> <function BinaryWriter.bytes at 0x0000023D3E367240>"
+        }
+      ],
+      "module": "accumulate_client.codec.writer",
+      "name": "BinaryWriter",
+      "type_category": "class"
+    },
+    "accumulate_client.Ed25519KeyPair": {
+      "fields": [
+        {
+          "default": null,
+          "name": "private_key",
+          "required": true,
+          "type": "<class 'cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PrivateKey'>"
+        }
+      ],
+      "is_serializable": false,
+      "methods": [],
+      "module": "accumulate_client.crypto.ed25519",
+      "name": "Ed25519KeyPair",
+      "type_category": "class"
+    },
+    "accumulate_client.TransactionCodec": {
+      "fields": [
+        {
+          "default": null,
+          "name": "args",
+          "required": true,
+          "type": "Any"
+        },
+        {
+          "default": null,
+          "name": "kwargs",
+          "required": true,
+          "type": "Any"
+        }
+      ],
+      "is_serializable": false,
+      "methods": [
+        {
+          "is_classmethod": false,
+          "is_staticmethod": true,
+          "name": "encode_tx_for_signing",
+          "signature": "(header: Dict[str, Any], body: Dict[str, Any]) -> bytes"
+        }
+      ],
+      "module": "accumulate_client.codec.transaction_codec",
+      "name": "TransactionCodec",
+      "type_category": "class"
+    },
+    "canonjson.Any": {
+      "fields": [
+        {
+          "default": null,
+          "name": "args",
+          "required": true,
+          "type": "Any"
+        },
+        {
+          "default": null,
+          "name": "kwargs",
+          "required": true,
+          "type": "Any"
+        }
+      ],
+      "is_serializable": false,
+      "methods": [],
+      "module": "typing",
+      "name": "Any",
+      "type_category": "class"
+    },
+    "client.AccumulateClient": {
+      "fields": [
+        {
+          "default": null,
+          "name": "server_url",
+          "required": true,
+          "type": "<class 'str'>"
+        }
+      ],
+      "is_serializable": false,
+      "methods": [],
+      "module": "accumulate_client.client",
+      "name": "AccumulateClient",
+      "type_category": "class"
+    },
+    "client.Any": {
+      "fields": [
+        {
+          "default": null,
+          "name": "args",
+          "required": true,
+          "type": "Any"
+        },
+        {
+          "default": null,
+          "name": "kwargs",
+          "required": true,
+          "type": "Any"
+        }
+      ],
+      "is_serializable": false,
+      "methods": [],
+      "module": "typing",
+      "name": "Any",
+      "type_category": "class"
+    },
+    "codec.hashes.Any": {
+      "fields": [
+        {
+          "default": null,
+          "name": "args",
+          "required": true,
+          "type": "Any"
+        },
+        {
+          "default": null,
+          "name": "kwargs",
+          "required": true,
+          "type": "Any"
+        }
+      ],
+      "is_serializable": false,
+      "methods": [],
+      "module": "typing",
+      "name": "Any",
+      "type_category": "class"
+    },
+    "codec.reader.BinaryReader": {
+      "fields": [
+        {
+          "default": null,
+          "name": "buf",
+          "required": true,
+          "type": "<class 'bytes'>"
+        }
+      ],
+      "is_serializable": false,
+      "methods": [],
+      "module": "accumulate_client.codec.reader",
+      "name": "BinaryReader",
+      "type_category": "class"
+    },
+    "codec.transaction_codec.AccumulateCodec": {
+      "fields": [
+        {
+          "default": null,
+          "name": "args",
+          "required": true,
+          "type": "Any"
+        },
+        {
+          "default": null,
+          "name": "kwargs",
+          "required": true,
+          "type": "Any"
+        }
+      ],
+      "is_serializable": false,
+      "methods": [
+        {
+          "is_classmethod": false,
+          "is_staticmethod": true,
+          "name": "bigint_marshal_binary",
+          "signature": "(bn: int, field: int = None) -> bytes"
+        },
+        {
+          "is_classmethod": false,
+          "is_staticmethod": true,
+          "name": "boolean_marshal_binary",
+          "signature": "(b: bool, field: int = None) -> bytes"
+        },
+        {
+          "is_classmethod": false,
+          "is_staticmethod": true,
+          "name": "bytes_marshal_binary",
+          "signature": "(val: bytes, field: int = None) -> bytes"
+        },
+        {
+          "is_classmethod": false,
+          "is_staticmethod": true,
+          "name": "field_marshal_binary",
+          "signature": "(field: int, val: bytes) -> bytes"
+        },
+        {
+          "is_classmethod": false,
+          "is_staticmethod": true,
+          "name": "hash_marshal_binary",
+          "signature": "(val: bytes, field: int = None) -> bytes"
+        },
+        {
+          "is_classmethod": false,
+          "is_staticmethod": true,
+          "name": "string_marshal_binary",
+          "signature": "(val: str, field: int = None) -> bytes"
+        },
+        {
+          "is_classmethod": false,
+          "is_staticmethod": true,
+          "name": "uvarint_marshal_binary",
+          "signature": "(val: int, field: int = None) -> bytes"
+        },
+        {
+          "is_classmethod": false,
+          "is_staticmethod": true,
+          "name": "varint_marshal_binary",
+          "signature": "(val: int, field: int = None) -> bytes"
+        }
+      ],
+      "module": "accumulate_client.codec.transaction_codec",
+      "name": "AccumulateCodec",
+      "type_category": "class"
+    },
+    "codec.transaction_codec.Any": {
+      "fields": [
+        {
+          "default": null,
+          "name": "args",
+          "required": true,
+          "type": "Any"
+        },
+        {
+          "default": null,
+          "name": "kwargs",
+          "required": true,
+          "type": "Any"
+        }
+      ],
+      "is_serializable": false,
+      "methods": [],
+      "module": "typing",
+      "name": "Any",
+      "type_category": "class"
+    },
+    "codec.transaction_codec.BinaryReader": {
+      "fields": [
+        {
+          "default": null,
+          "name": "buf",
+          "required": true,
+          "type": "<class 'bytes'>"
+        }
+      ],
+      "is_serializable": false,
+      "methods": [],
+      "module": "accumulate_client.codec.reader",
+      "name": "BinaryReader",
+      "type_category": "class"
+    },
+    "codec.transaction_codec.BinaryWriter": {
+      "fields": [],
+      "is_serializable": false,
+      "methods": [
+        {
+          "is_classmethod": false,
+          "is_staticmethod": false,
+          "name": "to_bytes",
+          "signature": "(self) -> <function BinaryWriter.bytes at 0x0000023D3E367240>"
+        }
+      ],
+      "module": "accumulate_client.codec.writer",
+      "name": "BinaryWriter",
+      "type_category": "class"
+    },
+    "codec.transaction_codec.TransactionCodec": {
+      "fields": [
+        {
+          "default": null,
+          "name": "args",
+          "required": true,
+          "type": "Any"
+        },
+        {
+          "default": null,
+          "name": "kwargs",
+          "required": true,
+          "type": "Any"
+        }
+      ],
+      "is_serializable": false,
+      "methods": [
+        {
+          "is_classmethod": false,
+          "is_staticmethod": true,
+          "name": "encode_tx_for_signing",
+          "signature": "(header: Dict[str, Any], body: Dict[str, Any]) -> bytes"
+        }
+      ],
+      "module": "accumulate_client.codec.transaction_codec",
+      "name": "TransactionCodec",
+      "type_category": "class"
+    },
+    "codec.writer.BinaryWriter": {
+      "fields": [],
+      "is_serializable": false,
+      "methods": [
+        {
+          "is_classmethod": false,
+          "is_staticmethod": false,
+          "name": "to_bytes",
+          "signature": "(self) -> <function BinaryWriter.bytes at 0x0000023D3E367240>"
+        }
+      ],
+      "module": "accumulate_client.codec.writer",
+      "name": "BinaryWriter",
+      "type_category": "class"
+    },
+    "crypto.ed25519.Ed25519KeyPair": {
+      "fields": [
+        {
+          "default": null,
+          "name": "private_key",
+          "required": true,
+          "type": "<class 'cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PrivateKey'>"
+        }
+      ],
+      "is_serializable": false,
+      "methods": [],
+      "module": "accumulate_client.crypto.ed25519",
+      "name": "Ed25519KeyPair",
+      "type_category": "class"
+    },
+    "json_rpc_client.Any": {
+      "fields": [
+        {
+          "default": null,
+          "name": "args",
+          "required": true,
+          "type": "Any"
+        },
+        {
+          "default": null,
+          "name": "kwargs",
+          "required": true,
+          "type": "Any"
+        }
+      ],
+      "is_serializable": false,
+      "methods": [],
+      "module": "typing",
+      "name": "Any",
+      "type_category": "class"
+    },
+    "json_rpc_client.JsonRpcClient": {
+      "fields": [
+        {
+          "default": null,
+          "name": "server_url",
+          "required": true,
+          "type": "<class 'str'>"
+        },
+        {
+          "default": "None",
+          "name": "timeout",
+          "required": false,
+          "type": "typing.Optional[float]"
+        }
+      ],
+      "is_serializable": false,
+      "methods": [],
+      "module": "accumulate_client.json_rpc_client",
+      "name": "JsonRpcClient",
+      "type_category": "class"
+    },
+    "json_rpc_client.JsonRpcException": {
+      "fields": [
+        {
+          "default": null,
+          "name": "message",
+          "required": true,
+          "type": "<class 'str'>"
+        },
+        {
+          "default": "None",
+          "name": "code",
+          "required": false,
+          "type": "typing.Optional[int]"
+        },
+        {
+          "default": "None",
+          "name": "data",
+          "required": false,
+          "type": "typing.Any"
+        }
+      ],
+      "is_serializable": false,
+      "methods": [],
+      "module": "accumulate_client.json_rpc_client",
+      "name": "JsonRpcException",
+      "type_category": "class"
+    },
+    "types.Any": {
+      "fields": [
+        {
+          "default": null,
+          "name": "args",
+          "required": true,
+          "type": "Any"
+        },
+        {
+          "default": null,
+          "name": "kwargs",
+          "required": true,
+          "type": "Any"
+        }
+      ],
+      "is_serializable": false,
+      "methods": [],
+      "module": "typing",
+      "name": "Any",
+      "type_category": "class"
+    },
+    "types.Enum": {
+      "fields": [],
+      "is_serializable": true,
+      "methods": [],
+      "module": "enum",
+      "name": "Enum",
+      "type_category": "enum"
+    },
+    "types.datetime": {
+      "fields": [
+        {
+          "default": null,
+          "name": "args",
+          "required": true,
+          "type": "Any"
+        },
+        {
+          "default": null,
+          "name": "kwargs",
+          "required": true,
+          "type": "Any"
+        }
+      ],
+      "is_serializable": false,
+      "methods": [],
+      "module": "datetime",
+      "name": "datetime",
+      "type_category": "class"
+    }
+  }
+}
