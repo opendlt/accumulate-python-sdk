@@ -1,0 +1,18 @@
+{
+  "data": {
+    "data": "0x",
+    "memo": "Employee Alice signing on behalf of department via delegation chain",
+    "publicKey": "0x89eb0d6a8a691dae2cd15ed0369931ce0a949ecafa5c3f93f8121833646e15c3",
+    "signature": "0x5ac8c78c45a5a4b8be4d15a5e6c23f87b2ad4f1c9e8f22d3b7c8a9b0d1e2f4a7c6d8e9f0a1b2c3d4e5f6789abcdef0123456789abcdef0123456789abcdef01",
+    "signer": "acc://alice-key1.acme.acme/book/1",
+    "signerVersion": 1,
+    "timestamp": 1672531200,
+    "transactionHash": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    "type": "ED25519Signature",
+    "vote": "accept"
+  },
+  "hash": "7ad06eb4a900faf9e3c1e98da7e72df7727ee41af266a305b9309a7c9246bab8",
+  "source": "upstream",
+  "source_file": "C:\\Accumulate_Stuff\\accumulate\\_claude_audit\\examples\\delegate_5_layers.json",
+  "source_path": "outermost_signature.signature.signature.signature.signature.signature"
+}

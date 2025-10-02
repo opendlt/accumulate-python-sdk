@@ -1,0 +1,11 @@
+{
+  "data": {
+    "note": "Signature type ETH not yet implemented",
+    "type": "eth"
+  },
+  "hash": "902ea520758860ec2b08297efb926e92d1477696686b8235fdacdcced71fdd11",
+  "source": "synthetic",
+  "source_file": "generated",
+  "source_path": "synthetic.ETH",
+  "unsupported": true
+}

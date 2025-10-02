@@ -1,0 +1,11 @@
+{
+  "data": {
+    "note": "Signature type RSASHA256 not yet implemented",
+    "type": "rsasha256"
+  },
+  "hash": "248ab96f65cf0385ebc20335d367a8e4d29795777714b4c6b731d853b4a2f03e",
+  "source": "synthetic",
+  "source_file": "generated",
+  "source_path": "synthetic.RSASHA256",
+  "unsupported": true
+}

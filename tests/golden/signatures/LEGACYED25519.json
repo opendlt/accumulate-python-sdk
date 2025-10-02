@@ -1,0 +1,14 @@
+{
+  "data": {
+    "note": "Placeholder for LEGACYED25519 (signer module not available)",
+    "publicKey": "4820cce02caca80e887c5c6d6292bfb819802bd60512ca6b9b3c38007c53c0a0",
+    "signature": "placeholder_signature_64_bytes_hex",
+    "type": "legacyed25519"
+  },
+  "hash": "fc07a173a052e312c13f444410b043307724438598ee1cb4e6bf83d40c012e4f",
+  "placeholder": true,
+  "source": "synthetic",
+  "source_file": "generated",
+  "source_path": "synthetic.LEGACYED25519",
+  "test_data": "74657374207472616e73616374696f6e206461746120666f72207369676e61747572652067656e65726174696f6e"
+}

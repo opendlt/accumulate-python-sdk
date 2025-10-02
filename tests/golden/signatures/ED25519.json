@@ -1,0 +1,14 @@
+{
+  "data": {
+    "note": "Placeholder for ED25519 (signer module not available)",
+    "publicKey": "7ed796e4b0a6072828be9b81df42fea026f4193f31957cd021d99f3c7b3ce4f2",
+    "signature": "placeholder_signature_64_bytes_hex",
+    "type": "ed25519"
+  },
+  "hash": "f4d608a12f8cc9a2c7f233501a8a111a83b3c672e7c4458802667bdd4d3c9031",
+  "placeholder": true,
+  "source": "synthetic",
+  "source_file": "generated",
+  "source_path": "synthetic.ED25519",
+  "test_data": "74657374207472616e73616374696f6e206461746120666f72207369676e61747572652067656e65726174696f6e"
+}

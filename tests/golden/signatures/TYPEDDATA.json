@@ -1,0 +1,11 @@
+{
+  "data": {
+    "note": "Signature type TYPEDDATA not yet implemented",
+    "type": "typeddata"
+  },
+  "hash": "e92a6be85b8622f577ea1245255e57b845fdcaeecaab61e58c5979b5a55e57e2",
+  "source": "synthetic",
+  "source_file": "generated",
+  "source_path": "synthetic.TYPEDDATA",
+  "unsupported": true
+}

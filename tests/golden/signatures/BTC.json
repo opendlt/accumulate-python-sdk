@@ -1,0 +1,11 @@
+{
+  "data": {
+    "note": "Signature type BTC not yet implemented",
+    "type": "btc"
+  },
+  "hash": "348fefaf85d0a45a5f7295a86d507ec16c65335162b114c495677a08c08bc7d0",
+  "source": "synthetic",
+  "source_file": "generated",
+  "source_path": "synthetic.BTC",
+  "unsupported": true
+}

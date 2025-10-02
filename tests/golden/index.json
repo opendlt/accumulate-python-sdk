@@ -1,0 +1,262 @@
+{
+  "generated_at": "2025-10-01T07:44:21.413545",
+  "signatures": {
+    "AUTHORITY": {
+      "file": "signatures\\AUTHORITY.json",
+      "hash": "584e13a7bb2960645b565f2d73a332d1b55feaeca6b851a7e3c26f56e011a5f4",
+      "source": "synthetic"
+    },
+    "BTC": {
+      "file": "signatures\\BTC.json",
+      "hash": "348fefaf85d0a45a5f7295a86d507ec16c65335162b114c495677a08c08bc7d0",
+      "source": "synthetic"
+    },
+    "BTCLEGACY": {
+      "file": "signatures\\BTCLEGACY.json",
+      "hash": "52645c9dbf9fe3155c96939b04857e401653597c954b6cf0ee807de636895da4",
+      "source": "synthetic"
+    },
+    "DELEGATED": {
+      "file": "signatures\\DELEGATED.json",
+      "hash": "7b9f5acde480feae89e59b88db3f9b38bf5fdf7338ebafe2e9c50084b37c4925",
+      "source": "synthetic"
+    },
+    "ECDSASHA256": {
+      "file": "signatures\\ECDSASHA256.json",
+      "hash": "57fde9d73def5ad49c69e5557f42db77c9dd517edc2979fcf368ad2d2925817c",
+      "source": "synthetic"
+    },
+    "ED25519": {
+      "file": "signatures\\ED25519.json",
+      "hash": "f4d608a12f8cc9a2c7f233501a8a111a83b3c672e7c4458802667bdd4d3c9031",
+      "source": "synthetic"
+    },
+    "ED25519Signature_upstream_0": {
+      "file": "signatures\\ED25519Signature_upstream_0.json",
+      "hash": "7ad06eb4a900faf9e3c1e98da7e72df7727ee41af266a305b9309a7c9246bab8",
+      "source": "upstream"
+    },
+    "ETH": {
+      "file": "signatures\\ETH.json",
+      "hash": "902ea520758860ec2b08297efb926e92d1477696686b8235fdacdcced71fdd11",
+      "source": "synthetic"
+    },
+    "INTERNAL": {
+      "file": "signatures\\INTERNAL.json",
+      "hash": "b6c622bdcdaebdf5ad78e38bc3fdb47fe87de0e1c1b89fe6a4b12eafcfa5cd7b",
+      "source": "synthetic"
+    },
+    "LEGACYED25519": {
+      "file": "signatures\\LEGACYED25519.json",
+      "hash": "fc07a173a052e312c13f444410b043307724438598ee1cb4e6bf83d40c012e4f",
+      "source": "synthetic"
+    },
+    "PARTITION": {
+      "file": "signatures\\PARTITION.json",
+      "hash": "7ec493bf46b6a25414828a4d2d2eee831972ddbec56c21f4d50e9a5c50facd9a",
+      "source": "synthetic"
+    },
+    "RCD1": {
+      "file": "signatures\\RCD1.json",
+      "hash": "c544e18e2f10ebd6e69c7766c89f7fced00ea2941e5620f6be64aa967b2f51d9",
+      "source": "synthetic"
+    },
+    "RECEIPT": {
+      "file": "signatures\\RECEIPT.json",
+      "hash": "14fd7327c77ea4e70e75a00384a8a5dc249eb683a209c2eda68b56c222f2e335",
+      "source": "synthetic"
+    },
+    "REMOTE": {
+      "file": "signatures\\REMOTE.json",
+      "hash": "1c82370a7f5e25d34a24093563f1623498be3ac2c470822fead8cfd184e991f7",
+      "source": "synthetic"
+    },
+    "RSASHA256": {
+      "file": "signatures\\RSASHA256.json",
+      "hash": "248ab96f65cf0385ebc20335d367a8e4d29795777714b4c6b731d853b4a2f03e",
+      "source": "synthetic"
+    },
+    "SET": {
+      "file": "signatures\\SET.json",
+      "hash": "70240b3eab3aabd1a9551749bfc06ea95589a9bf4fc1445696dac3e7712542af",
+      "source": "synthetic"
+    },
+    "TYPEDDATA": {
+      "file": "signatures\\TYPEDDATA.json",
+      "hash": "e92a6be85b8622f577ea1245255e57b845fdcaeecaab61e58c5979b5a55e57e2",
+      "source": "synthetic"
+    },
+    "ed25519_upstream_0": {
+      "file": "signatures\\ed25519_upstream_0.json",
+      "hash": "b5794e008852155949db81a1e613931025f1dfe0b8f29c3d637e15ab01fef725",
+      "source": "upstream"
+    }
+  },
+  "transactions": {
+    "AcmeFaucet": {
+      "file": "transactions\\AcmeFaucet.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "AddCredits": {
+      "file": "transactions\\AddCredits.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "BlockValidatorAnchor": {
+      "file": "transactions\\BlockValidatorAnchor.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "BurnCredits": {
+      "file": "transactions\\BurnCredits.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "BurnTokens": {
+      "file": "transactions\\BurnTokens.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "CreateDataAccount": {
+      "file": "transactions\\CreateDataAccount.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "CreateIdentity": {
+      "file": "transactions\\CreateIdentity.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "CreateKeyBook": {
+      "file": "transactions\\CreateKeyBook.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "CreateKeyPage": {
+      "file": "transactions\\CreateKeyPage.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "CreateToken": {
+      "file": "transactions\\CreateToken.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "CreateTokenAccount": {
+      "file": "transactions\\CreateTokenAccount.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "CreateToken_upstream_0": {
+      "file": "transactions\\CreateToken_upstream_0.json",
+      "hash": "039ce45d6a61e7afc1a729528020bd434bfd582fa6318674e58fdf3ab0d96634",
+      "source": "upstream"
+    },
+    "DirectoryAnchor": {
+      "file": "transactions\\DirectoryAnchor.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "IssueTokens": {
+      "file": "transactions\\IssueTokens.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "LockAccount": {
+      "file": "transactions\\LockAccount.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "NetworkMaintenance": {
+      "file": "transactions\\NetworkMaintenance.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "RemoteTransaction": {
+      "file": "transactions\\RemoteTransaction.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "SendTokens": {
+      "file": "transactions\\SendTokens.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "SyntheticBurnTokens": {
+      "file": "transactions\\SyntheticBurnTokens.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "SyntheticCreateIdentity": {
+      "file": "transactions\\SyntheticCreateIdentity.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "SyntheticDepositCredits": {
+      "file": "transactions\\SyntheticDepositCredits.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "SyntheticDepositTokens": {
+      "file": "transactions\\SyntheticDepositTokens.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "SyntheticForwardTransaction": {
+      "file": "transactions\\SyntheticForwardTransaction.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "SyntheticWriteData": {
+      "file": "transactions\\SyntheticWriteData.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "SystemGenesis": {
+      "file": "transactions\\SystemGenesis.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "SystemWriteData": {
+      "file": "transactions\\SystemWriteData.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "TransferCredits": {
+      "file": "transactions\\TransferCredits.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "UpdateAccountAuth": {
+      "file": "transactions\\UpdateAccountAuth.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "UpdateKey": {
+      "file": "transactions\\UpdateKey.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "UpdateKeyPage": {
+      "file": "transactions\\UpdateKeyPage.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "WriteData": {
+      "file": "transactions\\WriteData.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "WriteDataTo": {
+      "file": "transactions\\WriteDataTo.json",
+      "hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "synthetic"
+    },
+    "envelope_upstream_0": {
+      "file": "transactions\\envelope_upstream_0.json",
+      "hash": "29c9985bea2e526db229b5d57ed2c91b7530a9299b4cb9d6c87954341913bea2",
+      "source": "upstream"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "data": {
+    "note": "Signature type RECEIPT not yet implemented",
+    "type": "receipt"
+  },
+  "hash": "14fd7327c77ea4e70e75a00384a8a5dc249eb683a209c2eda68b56c222f2e335",
+  "source": "synthetic",
+  "source_file": "generated",
+  "source_path": "synthetic.RECEIPT",
+  "unsupported": true
+}

@@ -1,0 +1,11 @@
+{
+  "data": {
+    "note": "Signature type BTCLEGACY not yet implemented",
+    "type": "btclegacy"
+  },
+  "hash": "52645c9dbf9fe3155c96939b04857e401653597c954b6cf0ee807de636895da4",
+  "source": "synthetic",
+  "source_file": "generated",
+  "source_path": "synthetic.BTCLEGACY",
+  "unsupported": true
+}

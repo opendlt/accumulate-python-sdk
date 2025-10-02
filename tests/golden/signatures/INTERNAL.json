@@ -1,0 +1,11 @@
+{
+  "data": {
+    "note": "Signature type INTERNAL not yet implemented",
+    "type": "internal"
+  },
+  "hash": "b6c622bdcdaebdf5ad78e38bc3fdb47fe87de0e1c1b89fe6a4b12eafcfa5cd7b",
+  "source": "synthetic",
+  "source_file": "generated",
+  "source_path": "synthetic.INTERNAL",
+  "unsupported": true
+}

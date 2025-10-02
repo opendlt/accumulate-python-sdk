@@ -1,0 +1,11 @@
+{
+  "data": {
+    "note": "Signature type SET not yet implemented",
+    "type": "set"
+  },
+  "hash": "70240b3eab3aabd1a9551749bfc06ea95589a9bf4fc1445696dac3e7712542af",
+  "source": "synthetic",
+  "source_file": "generated",
+  "source_path": "synthetic.SET",
+  "unsupported": true
+}

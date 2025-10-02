@@ -1,0 +1,11 @@
+{
+  "data": {
+    "note": "Signature type RCD1 not yet implemented",
+    "type": "rcd1"
+  },
+  "hash": "c544e18e2f10ebd6e69c7766c89f7fced00ea2941e5620f6be64aa967b2f51d9",
+  "source": "synthetic",
+  "source_file": "generated",
+  "source_path": "synthetic.RCD1",
+  "unsupported": true
+}

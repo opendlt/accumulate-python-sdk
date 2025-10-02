@@ -1,0 +1,11 @@
+{
+  "data": {
+    "note": "Signature type PARTITION not yet implemented",
+    "type": "partition"
+  },
+  "hash": "7ec493bf46b6a25414828a4d2d2eee831972ddbec56c21f4d50e9a5c50facd9a",
+  "source": "synthetic",
+  "source_file": "generated",
+  "source_path": "synthetic.PARTITION",
+  "unsupported": true
+}

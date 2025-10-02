@@ -1,0 +1,11 @@
+{
+  "data": {
+    "note": "Signature type REMOTE not yet implemented",
+    "type": "remote"
+  },
+  "hash": "1c82370a7f5e25d34a24093563f1623498be3ac2c470822fead8cfd184e991f7",
+  "source": "synthetic",
+  "source_file": "generated",
+  "source_path": "synthetic.REMOTE",
+  "unsupported": true
+}

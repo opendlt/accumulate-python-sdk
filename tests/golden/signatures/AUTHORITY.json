@@ -1,0 +1,11 @@
+{
+  "data": {
+    "note": "Signature type AUTHORITY not yet implemented",
+    "type": "authority"
+  },
+  "hash": "584e13a7bb2960645b565f2d73a332d1b55feaeca6b851a7e3c26f56e011a5f4",
+  "source": "synthetic",
+  "source_file": "generated",
+  "source_path": "synthetic.AUTHORITY",
+  "unsupported": true
+}

@@ -1,0 +1,10 @@
+{
+  "data": {
+    "name": "transaction",
+    "type": "CreateToken"
+  },
+  "hash": "039ce45d6a61e7afc1a729528020bd434bfd582fa6318674e58fdf3ab0d96634",
+  "source": "upstream",
+  "source_file": "C:\\Accumulate_Stuff\\accumulate\\protocol\\signature_eip712.json",
+  "source_path": "CreateTokenAccount.TokenIssuerProof[0]"
+}

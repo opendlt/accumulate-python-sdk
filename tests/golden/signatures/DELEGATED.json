@@ -1,0 +1,11 @@
+{
+  "data": {
+    "note": "Signature type DELEGATED not yet implemented",
+    "type": "delegated"
+  },
+  "hash": "7b9f5acde480feae89e59b88db3f9b38bf5fdf7338ebafe2e9c50084b37c4925",
+  "source": "synthetic",
+  "source_file": "generated",
+  "source_path": "synthetic.DELEGATED",
+  "unsupported": true
+}

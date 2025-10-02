@@ -1,0 +1,11 @@
+{
+  "data": {
+    "note": "Signature type ECDSASHA256 not yet implemented",
+    "type": "ecdsasha256"
+  },
+  "hash": "57fde9d73def5ad49c69e5557f42db77c9dd517edc2979fcf368ad2d2925817c",
+  "source": "synthetic",
+  "source_file": "generated",
+  "source_path": "synthetic.ECDSASHA256",
+  "unsupported": true
+}
