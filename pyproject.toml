@@ -32,12 +32,19 @@ classifiers = [
 dependencies = [
     "requests>=2.32",
     "cryptography>=42",
-    "typing-extensions>=4.8; python_version<'3.11'"
+    "pydantic>=2.0.0",
+    "typing-extensions>=4.8; python_version<'3.11'",
+    "aiohttp>=3.8.0",
+    "ecdsa>=0.18.0",
+    "websockets>=11.0.0"
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest", "coverage", "mypy", "ruff", "pdoc", "build", "twine", "genbadge[coverage]"
+    "pytest", "coverage", "mypy", "ruff", "pdoc", "build", "twine", "genbadge[coverage]", "psutil", "pytest-asyncio>=0.23", "websockets>=11.0.0", "ecdsa>=0.18.0", "coincurve>=21.0.0"
+]
+secp256k1 = [
+    "ecdsa>=0.18.0", "coincurve>=21.0.0"
 ]
 
 [project.urls]
@@ -70,3 +77,40 @@ no_implicit_optional = true
 check_untyped_defs = true
 strict_optional = true
 ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+asyncio_mode = "auto"
+
+markers = [
+  "unit: fast, local unit tests",
+  "metrics: tests that assert metrics/telemetry surfaces",
+  "recovery: circuit-breaker / retry / recovery behavior",
+  "streaming: websocket streaming behavior",
+  "performance: perf/batching/pooling behavior (can use small bounds)",
+  "integration: devnet/live RPC integration tests",
+  "conformance: golden vector & parity tests",
+  "fuzz: fuzz-based roundtrips"
+]
+
+[tool.coverage.run]
+source = ["src/accumulate_client"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/.*",
+    "setup.py"
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod"
+]
+show_missing = true
