@@ -34,6 +34,7 @@ class JsonRpcClient:
             timeout: Request timeout in seconds (default: 30)
         """
         self._server_url = server_url
+        self.host = server_url  # Public attribute for compatibility
         self._timeout = timeout or 30.0
         self._session = requests.Session()
 
@@ -146,6 +147,108 @@ class JsonRpcClient:
     def close(self) -> None:
         """Close the HTTP session"""
         self._session.close()
+
+    # Core API methods for compatibility with test expectations
+    def status(self) -> Dict[str, Any]:
+        """Get network status"""
+        return self.call("status")
+
+    def version(self) -> Dict[str, Any]:
+        """Get node version"""
+        return self.call("version")
+
+    def describe(self) -> Dict[str, Any]:
+        """Get network description"""
+        return self.call("describe")
+
+    def metrics(self) -> Dict[str, Any]:
+        """Get network metrics"""
+        return self.call("metrics")
+
+    def query(self, scope: str, query: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Execute a query"""
+        params = {"scope": scope}
+        if query:
+            params.update(query)
+        return self.call("query", params)
+
+    def submit(self, envelope: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Submit a transaction"""
+        result = self.call("submit", {"envelope": envelope})
+        return [result] if not isinstance(result, list) else result
+
+    def faucet(self, account: str) -> Dict[str, Any]:
+        """Request tokens from faucet"""
+        return self.call("faucet", {"account": account})
+
+    def query_tx(self, txid: str) -> Dict[str, Any]:
+        """Query transaction by ID"""
+        return self.call("query-tx", {"txid": txid})
+
+    def query_directory(self, url: str) -> Dict[str, Any]:
+        """Query directory"""
+        return self.call("query-directory", {"url": url})
+
+    def query_data(self, url: str) -> Dict[str, Any]:
+        """Query data"""
+        return self.call("query-data", {"url": url})
+
+    def execute(self, envelope: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute a transaction"""
+        return self.call("execute", {"envelope": envelope})
+
+    def node_info(self) -> Dict[str, Any]:
+        """Get node information"""
+        return self.call("node-info")
+
+    def network_status(self) -> Dict[str, Any]:
+        """Get network status"""
+        return self.call("network-status")
+
+    def find_service(self) -> Dict[str, Any]:
+        """Find service"""
+        return self.call("find-service")
+
+    def consensus_status(self) -> Dict[str, Any]:
+        """Get consensus status"""
+        return self.call("consensus-status")
+
+    def list_snapshots(self) -> List[Dict[str, Any]]:
+        """List snapshots"""
+        return self.call("list-snapshots")
+
+    def query_tx_local(self, txid: str) -> Dict[str, Any]:
+        """Query transaction locally"""
+        return self.call("query-tx-local", {"txid": txid})
+
+    def query_tx_history(self, url: str) -> Dict[str, Any]:
+        """Query transaction history"""
+        return self.call("query-tx-history", {"url": url})
+
+    def query_data_set(self, url: str) -> Dict[str, Any]:
+        """Query data set"""
+        return self.call("query-data-set", {"url": url})
+
+    def query_key_page_index(self, url: str, key: str) -> Dict[str, Any]:
+        """Query key page index"""
+        return self.call("query-key-page-index", {"url": url, "key": key})
+
+    def query_minor_blocks(self, url: str) -> Dict[str, Any]:
+        """Query minor blocks"""
+        return self.call("query-minor-blocks", {"url": url})
+
+    def query_major_blocks(self, url: str) -> Dict[str, Any]:
+        """Query major blocks"""
+        return self.call("query-major-blocks", {"url": url})
+
+    def query_synth(self, source: str, destination: str) -> Dict[str, Any]:
+        """Query synthetic transactions"""
+        return self.call("query-synth", {"source": source, "destination": destination})
+
+    def validate(self, envelope: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Validate a transaction"""
+        result = self.call("validate", {"envelope": envelope})
+        return [result] if not isinstance(result, list) else result
 
     def __enter__(self):
         return self
