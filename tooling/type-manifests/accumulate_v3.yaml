@@ -1,0 +1,418 @@
+# Accumulate Protocol v3 Type Manifest
+# Bootstrap version with core transaction types
+
+types:
+  TransactionType:
+    kind: enum
+    description: "Transaction type enumeration"
+    values:
+      - name: "CreateIdentity"
+        value: "createIdentity"
+      - name: "SendTokens"
+        value: "sendTokens"
+      - name: "CreateDataAccount"
+        value: "createDataAccount"
+      - name: "WriteData"
+        value: "writeData"
+      - name: "AddCredits"
+        value: "addCredits"
+      - name: "UpdateKeyPage"
+        value: "updateKeyPage"
+      - name: "CreateKeyBook"
+        value: "createKeyBook"
+
+  Url:
+    kind: struct
+    description: "Accumulate URL"
+    fields:
+      - name: "url"
+        type: "string"
+        description: "URL string"
+
+transactions:
+  CreateIdentity:
+    description: "Create an identity"
+    fields:
+      - name: "url"
+        type: "url"
+        description: "Identity URL to create"
+        required: true
+      - name: "keyBook"
+        type: "url"
+        description: "Key book URL"
+        optional: true
+      - name: "keyPage"
+        type: "url"
+        description: "Key page URL"
+        optional: true
+
+  SendTokens:
+    description: "Send tokens between accounts"
+    fields:
+      - name: "to"
+        type: "url"
+        description: "Recipient account URL"
+        required: true
+      - name: "amount"
+        type: "uint64"
+        description: "Amount to send in atomic units"
+        required: true
+      - name: "meta"
+        type: "bytes"
+        description: "Optional metadata"
+        optional: true
+
+  CreateDataAccount:
+    description: "Create a data account"
+    fields:
+      - name: "url"
+        type: "url"
+        description: "Data account URL to create"
+        required: true
+      - name: "keyBook"
+        type: "url"
+        description: "Key book URL"
+        optional: true
+
+  WriteData:
+    description: "Write data to a data account"
+    fields:
+      - name: "data"
+        type: "bytes"
+        description: "Data to write"
+        required: true
+      - name: "scratch"
+        type: "bool"
+        description: "Whether to write to scratch space"
+        optional: true
+
+  AddCredits:
+    description: "Add credits to an account"
+    fields:
+      - name: "recipient"
+        type: "url"
+        description: "Recipient account URL"
+        required: true
+      - name: "amount"
+        type: "uint64"
+        description: "Amount to add"
+        required: true
+      - name: "oracle"
+        type: "float64"
+        description: "Oracle price"
+        optional: true
+
+  UpdateKeyPage:
+    description: "Update a key page"
+    fields:
+      - name: "operation"
+        type: "string"
+        description: "Operation type (add, remove, update)"
+        required: true
+      - name: "key"
+        type: "bytes"
+        description: "Key data"
+        required: true
+      - name: "newKey"
+        type: "bytes"
+        description: "New key data for update operations"
+        optional: true
+
+  CreateKeyBook:
+    description: "Create a key book"
+    fields:
+      - name: "url"
+        type: "url"
+        description: "Key book URL to create"
+        required: true
+      - name: "pages"
+        type: "uint64"
+        description: "Number of pages"
+        optional: true
+
+  CreateKeyPage:
+    description: "Create a key page"
+    fields:
+      - name: "keys"
+        type: "bytes"
+        description: "Key data"
+        required: true
+        repeated: true
+
+  BurnTokens:
+    description: "Burn tokens"
+    fields:
+      - name: "amount"
+        type: "uint64"
+        description: "Amount to burn"
+        required: true
+
+  CreateToken:
+    description: "Create a new token"
+    fields:
+      - name: "url"
+        type: "url"
+        description: "Token URL to create"
+        required: true
+      - name: "symbol"
+        type: "string"
+        description: "Token symbol"
+        required: true
+      - name: "precision"
+        type: "uint64"
+        description: "Token precision"
+        required: true
+
+  CreateTokenAccount:
+    description: "Create a token account"
+    fields:
+      - name: "url"
+        type: "url"
+        description: "Token account URL to create"
+        required: true
+      - name: "tokenUrl"
+        type: "url"
+        description: "Token URL"
+        required: true
+      - name: "keyBook"
+        type: "url"
+        description: "Key book URL"
+        optional: true
+
+  CreateLiteTokenAccount:
+    description: "Create a lite token account"
+    fields: []
+
+  IssueTokens:
+    description: "Issue tokens"
+    fields:
+      - name: "recipient"
+        type: "url"
+        description: "Recipient account URL"
+        required: true
+      - name: "amount"
+        type: "uint64"
+        description: "Amount to issue"
+        required: true
+
+  BurnCredits:
+    description: "Burn credits"
+    fields:
+      - name: "amount"
+        type: "uint64"
+        description: "Amount to burn"
+        required: true
+
+  TransferCredits:
+    description: "Transfer credits"
+    fields:
+      - name: "to"
+        type: "url"
+        description: "Recipient account URL"
+        required: true
+      - name: "amount"
+        type: "uint64"
+        description: "Amount to transfer"
+        required: true
+
+  WriteDataTo:
+    description: "Write data to a specific account"
+    fields:
+      - name: "recipient"
+        type: "url"
+        description: "Recipient data account URL"
+        required: true
+      - name: "data"
+        type: "bytes"
+        description: "Data to write"
+        required: true
+
+  UpdateAccountAuth:
+    description: "Update account authorization"
+    fields:
+      - name: "authority"
+        type: "url"
+        description: "Authority URL"
+        required: true
+      - name: "operations"
+        type: "string"
+        description: "Authorized operations"
+        required: true
+        repeated: true
+
+  LockAccount:
+    description: "Lock account"
+    fields:
+      - name: "height"
+        type: "uint64"
+        description: "Block height to lock until"
+        required: true
+
+  AcmeFaucet:
+    description: "ACME faucet transaction"
+    fields:
+      - name: "url"
+        type: "url"
+        description: "Target account URL"
+        required: true
+
+  UpdateKey:
+    description: "Update a key"
+    fields:
+      - name: "newKeyHash"
+        type: "bytes"
+        description: "New key hash"
+        required: true
+
+  NetworkMaintenance:
+    description: "Network maintenance transaction"
+    fields:
+      - name: "operation"
+        type: "string"
+        description: "Maintenance operation"
+        required: true
+      - name: "target"
+        type: "url"
+        description: "Target account URL"
+        required: true
+
+  SystemGenesis:
+    description: "System genesis transaction"
+    fields:
+      - name: "networkName"
+        type: "string"
+        description: "Network name"
+        required: true
+      - name: "version"
+        type: "string"
+        description: "System version"
+        required: true
+
+  SystemWriteData:
+    description: "System write data transaction"
+    fields:
+      - name: "data"
+        type: "bytes"
+        description: "System data"
+        required: true
+
+  DirectoryAnchor:
+    description: "Directory anchor transaction"
+    fields:
+      - name: "source"
+        type: "url"
+        description: "Source URL"
+        required: true
+      - name: "rootChainAnchor"
+        type: "bytes"
+        description: "Root chain anchor"
+        required: true
+      - name: "stateTreeAnchor"
+        type: "bytes"
+        description: "State tree anchor"
+        required: true
+
+  BlockValidatorAnchor:
+    description: "Block validator anchor transaction"
+    fields:
+      - name: "source"
+        type: "url"
+        description: "Source URL"
+        required: true
+      - name: "rootChainAnchor"
+        type: "bytes"
+        description: "Root chain anchor"
+        required: true
+      - name: "stateTreeAnchor"
+        type: "bytes"
+        description: "State tree anchor"
+        required: true
+      - name: "minorBlocks"
+        type: "bytes"
+        description: "Minor block hashes"
+        required: true
+        repeated: true
+
+  SyntheticCreateIdentity:
+    description: "Synthetic create identity transaction"
+    fields:
+      - name: "url"
+        type: "url"
+        description: "Identity URL to create"
+        required: true
+      - name: "cause"
+        type: "bytes"
+        description: "Causation hash"
+        required: true
+
+  SyntheticWriteData:
+    description: "Synthetic write data transaction"
+    fields:
+      - name: "data"
+        type: "bytes"
+        description: "Data to write"
+        required: true
+      - name: "cause"
+        type: "bytes"
+        description: "Causation hash"
+        required: true
+
+  SyntheticDepositTokens:
+    description: "Synthetic deposit tokens transaction"
+    fields:
+      - name: "token"
+        type: "url"
+        description: "Token URL"
+        required: true
+      - name: "amount"
+        type: "uint64"
+        description: "Amount to deposit"
+        required: true
+      - name: "cause"
+        type: "bytes"
+        description: "Causation hash"
+        required: true
+
+  SyntheticDepositCredits:
+    description: "Synthetic deposit credits transaction"
+    fields:
+      - name: "amount"
+        type: "uint64"
+        description: "Amount to deposit"
+        required: true
+      - name: "cause"
+        type: "bytes"
+        description: "Causation hash"
+        required: true
+
+  SyntheticBurnTokens:
+    description: "Synthetic burn tokens transaction"
+    fields:
+      - name: "amount"
+        type: "uint64"
+        description: "Amount to burn"
+        required: true
+      - name: "cause"
+        type: "bytes"
+        description: "Causation hash"
+        required: true
+
+  SyntheticForwardTransaction:
+    description: "Synthetic forward transaction"
+    fields:
+      - name: "envelope"
+        type: "bytes"
+        description: "Transaction envelope"
+        required: true
+      - name: "cause"
+        type: "bytes"
+        description: "Causation hash"
+        required: true
+
+  RemoteTransaction:
+    description: "Remote transaction"
+    fields:
+      - name: "hash"
+        type: "bytes"
+        description: "Transaction hash"
+        required: true
