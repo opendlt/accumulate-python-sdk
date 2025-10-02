@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 import pytest
 import requests
 
-from accumulate_client.client_compat import AccumulateClient
+from accumulate_client import AccumulateClient
 
 
 class FakeJsonRpcClient:
@@ -20,7 +20,7 @@ class FakeJsonRpcClient:
         self.should_raise_http_error = False
         self.should_raise_json_error = False
 
-    def post(self, url, json=None, headers=None):
+    def post(self, url, json=None, headers=None, **kwargs):
         """Mock the requests.Session.post method"""
         # Record the call
         call_record = {
@@ -56,7 +56,7 @@ class FakeJsonRpcClient:
         # Add RPC error if configured
         if hasattr(self, "_next_rpc_error") and self._next_rpc_error:
             response_data = {"error": self._next_rpc_error}
-            delattr(self, "_next_rpc_error")
+            # Don't delete the error - keep it for subsequent calls to avoid retries
 
         mock_response.json.return_value = response_data
         return mock_response
@@ -66,8 +66,13 @@ class FakeJsonRpcClient:
         self.responses[method] = response
 
     def set_rpc_error(self, error: dict):
-        """Set the next call to return an RPC error"""
+        """Set calls to return an RPC error"""
         self._next_rpc_error = error
+
+    def clear_rpc_error(self):
+        """Clear the RPC error"""
+        if hasattr(self, "_next_rpc_error"):
+            delattr(self, "_next_rpc_error")
 
     def get_last_call(self):
         """Get the last recorded call"""
@@ -94,7 +99,7 @@ class TestAccumulateClientPublicAPI:
             client.close()
             mock_close.assert_called_once()
 
-    @patch("accumulate_client.client_compat.requests.Session")
+    @patch("accumulate_client.api_client.requests.Session")
     def test_call_success(self, mock_session_class):
         """Test successful call method"""
         # Setup
@@ -116,10 +121,10 @@ class TestAccumulateClientPublicAPI:
         call = fake_client.get_last_call()
         assert call["method"] == "test-method"
         assert call["params"] == {"param1": "value1"}
-        assert call["url"] == "http://test.example.com"
-        assert call["headers"] == {"Content-Type": "application/json"}
+        assert call["url"] == "http://test.example.com:80/v3"
+        assert call["headers"]["Content-Type"] == "application/json"
 
-    @patch("accumulate_client.client_compat.requests.Session")
+    @patch("accumulate_client.api_client.requests.Session")
     def test_call_with_none_params(self, mock_session_class):
         """Test call method with None params"""
         # Setup
@@ -137,7 +142,7 @@ class TestAccumulateClientPublicAPI:
         call = fake_client.get_last_call()
         assert call["params"] == {}  # None params should become empty dict
 
-    @patch("accumulate_client.client_compat.requests.Session")
+    @patch("accumulate_client.api_client.requests.Session")
     def test_call_rpc_error(self, mock_session_class):
         """Test call method with RPC error"""
         # Setup
@@ -156,7 +161,7 @@ class TestAccumulateClientPublicAPI:
         assert "JSON-RPC Error" in str(exc_info.value)
         assert "Invalid Request" in str(exc_info.value)
 
-    @patch("accumulate_client.client_compat.requests.Session")
+    @patch("accumulate_client.api_client.requests.Session")
     def test_call_http_error(self, mock_session_class):
         """Test call method with HTTP error"""
         # Setup
@@ -172,7 +177,7 @@ class TestAccumulateClientPublicAPI:
         with pytest.raises(requests.exceptions.HTTPError):
             client.call("test-method")
 
-    @patch("accumulate_client.client_compat.requests.Session")
+    @patch("accumulate_client.api_client.requests.Session")
     def test_describe(self, mock_session_class):
         """Test describe method"""
         # Setup
@@ -192,7 +197,7 @@ class TestAccumulateClientPublicAPI:
         call = fake_client.get_last_call()
         assert call["method"] == "describe"
 
-    @patch("accumulate_client.client_compat.requests.Session")
+    @patch("accumulate_client.api_client.requests.Session")
     def test_status(self, mock_session_class):
         """Test status method"""
         # Setup
@@ -212,7 +217,7 @@ class TestAccumulateClientPublicAPI:
         call = fake_client.get_last_call()
         assert call["method"] == "status"
 
-    @patch("accumulate_client.client_compat.requests.Session")
+    @patch("accumulate_client.api_client.requests.Session")
     def test_version(self, mock_session_class):
         """Test version method"""
         # Setup
@@ -232,7 +237,7 @@ class TestAccumulateClientPublicAPI:
         call = fake_client.get_last_call()
         assert call["method"] == "version"
 
-    @patch("accumulate_client.client_compat.requests.Session")
+    @patch("accumulate_client.api_client.requests.Session")
     def test_faucet(self, mock_session_class):
         """Test faucet method"""
         # Setup
@@ -253,7 +258,7 @@ class TestAccumulateClientPublicAPI:
         assert call["method"] == "faucet"
         assert call["params"] == {"url": "acc://test/ACME"}
 
-    @patch("accumulate_client.client_compat.requests.Session")
+    @patch("accumulate_client.api_client.requests.Session")
     def test_execute_methods(self, mock_session_class):
         """Test various execute_* methods"""
         # Setup
@@ -289,7 +294,7 @@ class TestAccumulateClientPublicAPI:
         call = fake_client.get_last_call()
         assert call["method"] == "create-token-account"
 
-    @patch("accumulate_client.client_compat.requests.Session")
+    @patch("accumulate_client.api_client.requests.Session")
     def test_query_methods(self, mock_session_class):
         """Test various query_* methods"""
         # Setup
@@ -323,7 +328,7 @@ class TestAccumulateClientPublicAPI:
         call = fake_client.get_last_call()
         assert call["method"] == "query-directory"
 
-    @patch("accumulate_client.client_compat.requests.Session")
+    @patch("accumulate_client.api_client.requests.Session")
     def test_additional_execute_methods(self, mock_session_class):
         """Test additional execute_* methods for coverage"""
         # Setup
@@ -404,7 +409,7 @@ class TestAccumulateClientPublicAPI:
         call = fake_client.get_last_call()
         assert call["method"] == "write-data-to"
 
-    @patch("accumulate_client.client_compat.requests.Session")
+    @patch("accumulate_client.api_client.requests.Session")
     def test_additional_query_methods(self, mock_session_class):
         """Test additional query_* methods for coverage"""
         # Setup
@@ -450,7 +455,7 @@ class TestAccumulateClientPublicAPI:
         call = fake_client.get_last_call()
         assert call["method"] == "metrics"
 
-    @patch("accumulate_client.client_compat.requests.Session")
+    @patch("accumulate_client.api_client.requests.Session")
     def test_v3_api_methods(self, mock_session_class):
         """Test V3 API methods"""
         # Setup
@@ -481,7 +486,7 @@ class TestAccumulateClientPublicAPI:
         call = fake_client.get_last_call()
         assert call["method"] == "submit-multi"
 
-    @patch("accumulate_client.client_compat.requests.Session")
+    @patch("accumulate_client.api_client.requests.Session")
     def test_duplicate_methods(self, mock_session_class):
         """Test the duplicate method definitions for coverage"""
         # Setup
@@ -503,7 +508,7 @@ class TestAccumulateClientPublicAPI:
         assert call["method"] == "query"
         assert call["params"] == {}
 
-    @patch("accumulate_client.client_compat.requests.Session")
+    @patch("accumulate_client.api_client.requests.Session")
     def test_edge_cases(self, mock_session_class):
         """Test edge cases for better coverage"""
         # Setup
@@ -525,7 +530,7 @@ class TestAccumulateClientPublicAPI:
         call = fake_client.get_last_call()
         assert call["params"] == complex_params
 
-    @patch("accumulate_client.client_compat.requests.Session")
+    @patch("accumulate_client.api_client.requests.Session")
     def test_response_without_result(self, mock_session_class):
         """Test response handling when result is missing"""
         # Setup

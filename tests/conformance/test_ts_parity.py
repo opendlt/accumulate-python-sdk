@@ -14,8 +14,11 @@ import os
 # Import our crypto helpers
 import sys
 import unittest
+from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
 from helpers.crypto_helpers import (
     canonical_json,
     create_signature_envelope,
@@ -29,6 +32,9 @@ from helpers.crypto_helpers import (
     validate_ed25519_test_vector,
     verify_signature_envelope,
 )
+
+# Import SDK crypto classes to test direct usage
+from accumulate_client.crypto.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 
 
 class TestTSParity(unittest.TestCase):
@@ -346,6 +352,101 @@ class TestTSParity(unittest.TestCase):
                 self.assertEqual(
                     checksum, case["expectedChecksum"], f"Checksum mismatch for {key_str}"
                 )
+
+    def test_sdk_direct_integration(self):
+        """Test direct SDK crypto integration versus helper functions"""
+        # Test that helpers are using SDK classes by comparing results
+        test_seed = bytes.fromhex("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
+        test_message = b"test message for SDK integration"
+
+        # Test 1: Key generation should match between helper and direct SDK
+        helper_private, helper_public = ed25519_keypair_from_seed(test_seed)
+
+        sdk_private = Ed25519PrivateKey.from_bytes(test_seed)
+        sdk_public = sdk_private.public_key()
+
+        self.assertEqual(helper_private, sdk_private.to_bytes(), "Helper should use SDK private key")
+        self.assertEqual(helper_public, sdk_public.to_bytes(), "Helper should use SDK public key")
+
+        # Test 2: Signing should produce valid results
+        helper_signature = ed25519_sign(test_seed, test_message)
+        sdk_signature = sdk_private.sign(test_message)
+
+        # Both should be valid (signatures are non-deterministic)
+        self.assertTrue(ed25519_verify(helper_public, helper_signature, test_message),
+                       "Helper signature should verify")
+        self.assertTrue(sdk_public.verify(sdk_signature, test_message),
+                       "SDK signature should verify")
+
+        # Cross-verification: SDK should verify helper signature and vice versa
+        self.assertTrue(sdk_public.verify(helper_signature, test_message),
+                       "SDK should verify helper signature")
+        self.assertTrue(ed25519_verify(helper_public, sdk_signature, test_message),
+                       "Helper should verify SDK signature")
+
+    def test_sdk_url_derivation_consistency(self):
+        """Test URL derivation consistency between helpers and SDK expectations"""
+        # Use a test vector from the signing vectors
+        vector = self.signing_vectors["vectors"][0]
+        public_key_bytes = bytes.fromhex(vector["publicKey"])
+
+        # Test lite identity URL derivation
+        helper_lid = derive_lite_identity_url(public_key_bytes)
+        expected_lid = vector["lid"]
+
+        self.assertEqual(helper_lid, expected_lid, "Helper LID should match test vector")
+
+        # Verify the URL can be parsed correctly (future: when AccountUrl supports lite parsing)
+        self.assertTrue(helper_lid.startswith("acc://"), "LID should start with acc://")
+        self.assertEqual(len(helper_lid), 54, "LID should be exactly 54 characters")
+
+        # Test lite token account URL derivation
+        helper_lta = derive_lite_token_account_url(public_key_bytes)
+        expected_lta = vector["lta"]
+
+        self.assertEqual(helper_lta, expected_lta, "Helper LTA should match test vector")
+        self.assertTrue(helper_lta.startswith("acc://"), "LTA should start with acc://")
+        self.assertTrue(helper_lta.endswith("/ACME"), "LTA should end with /ACME")
+
+    def test_enhanced_signature_verification_matrix(self):
+        """Test comprehensive signature verification matrix"""
+        # Create multiple keypairs and test cross-verification
+        seeds = [
+            bytes.fromhex("1111111111111111111111111111111111111111111111111111111111111111"),
+            bytes.fromhex("2222222222222222222222222222222222222222222222222222222222222222"),
+            bytes.fromhex("3333333333333333333333333333333333333333333333333333333333333333"),
+        ]
+
+        messages = [
+            b"message 1",
+            b"message 2",
+            b"different message"
+        ]
+
+        for i, seed in enumerate(seeds):
+            with self.subTest(keypair=i):
+                private_key = Ed25519PrivateKey.from_bytes(seed)
+                public_key = private_key.public_key()
+
+                for j, message in enumerate(messages):
+                    with self.subTest(message=j):
+                        # Sign with SDK
+                        sdk_signature = private_key.sign(message)
+
+                        # Verify with both SDK and helper
+                        self.assertTrue(public_key.verify(sdk_signature, message),
+                                       f"SDK verification failed for keypair {i}, message {j}")
+                        self.assertTrue(ed25519_verify(public_key.to_bytes(), sdk_signature, message),
+                                       f"Helper verification failed for keypair {i}, message {j}")
+
+                        # Sign with helper
+                        helper_signature = ed25519_sign(seed, message)
+
+                        # Verify with both SDK and helper
+                        self.assertTrue(public_key.verify(helper_signature, message),
+                                       f"SDK verification of helper signature failed for keypair {i}, message {j}")
+                        self.assertTrue(ed25519_verify(public_key.to_bytes(), helper_signature, message),
+                                       f"Helper verification of helper signature failed for keypair {i}, message {j}")
 
 
 if __name__ == "__main__":

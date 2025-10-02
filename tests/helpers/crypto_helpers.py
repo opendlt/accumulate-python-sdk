@@ -4,14 +4,20 @@
 Crypto helpers for TS parity testing
 
 Implements canonical JSON serialization, Ed25519 signing, and SHA-256 hashing
-to match TypeScript SDK behavior exactly.
+to match TypeScript SDK behavior exactly using real Accumulate SDK crypto classes.
 """
 
 import hashlib
+import sys
+import os
 from typing import Any, Dict, Union
+from pathlib import Path
 
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import ed25519
+# Add parent directory to path for SDK imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+from accumulate_client.crypto.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 
 
 def canonical_json(obj: Any) -> str:
@@ -92,7 +98,7 @@ def derive_lite_token_account_url(public_key_bytes: bytes, token: str = "ACME") 
 
 def ed25519_sign(private_key_bytes: bytes, message: bytes) -> bytes:
     """
-    Ed25519 signature matching TS SDK behavior.
+    Ed25519 signature matching TS SDK behavior using SDK crypto classes.
 
     Args:
         private_key_bytes: 32-byte private key
@@ -101,13 +107,13 @@ def ed25519_sign(private_key_bytes: bytes, message: bytes) -> bytes:
     Returns:
         64-byte detached signature
     """
-    private_key = ed25519.Ed25519PrivateKey.from_private_bytes(private_key_bytes)
+    private_key = Ed25519PrivateKey.from_bytes(private_key_bytes)
     return private_key.sign(message)
 
 
 def ed25519_verify(public_key_bytes: bytes, signature: bytes, message: bytes) -> bool:
     """
-    Ed25519 signature verification.
+    Ed25519 signature verification using SDK crypto classes.
 
     Args:
         public_key_bytes: 32-byte public key
@@ -118,16 +124,15 @@ def ed25519_verify(public_key_bytes: bytes, signature: bytes, message: bytes) ->
         True if signature is valid
     """
     try:
-        public_key = ed25519.Ed25519PublicKey.from_public_bytes(public_key_bytes)
-        public_key.verify(signature, message)
-        return True
+        public_key = Ed25519PublicKey.from_bytes(public_key_bytes)
+        return public_key.verify(signature, message)
     except Exception:
         return False
 
 
 def ed25519_keypair_from_seed(seed: bytes) -> tuple[bytes, bytes]:
     """
-    Generate Ed25519 keypair from 32-byte seed.
+    Generate Ed25519 keypair from 32-byte seed using SDK crypto classes.
 
     Args:
         seed: 32-byte seed
@@ -135,18 +140,11 @@ def ed25519_keypair_from_seed(seed: bytes) -> tuple[bytes, bytes]:
     Returns:
         Tuple of (private_key_bytes, public_key_bytes)
     """
-    private_key = ed25519.Ed25519PrivateKey.from_private_bytes(seed)
+    private_key = Ed25519PrivateKey.from_bytes(seed)
     public_key = private_key.public_key()
 
-    private_key_bytes = private_key.private_bytes(
-        encoding=serialization.Encoding.Raw,
-        format=serialization.PrivateFormat.Raw,
-        encryption_algorithm=serialization.NoEncryption(),
-    )
-
-    public_key_bytes = public_key.public_bytes(
-        encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw
-    )
+    private_key_bytes = private_key.to_bytes()
+    public_key_bytes = public_key.to_bytes()
 
     return private_key_bytes, public_key_bytes
 
