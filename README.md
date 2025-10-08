@@ -1,6 +1,6 @@
 # Accumulate Python SDK
 
-**Version 2.3.0** - Comprehensive Python SDK for the Accumulate Protocol
+**Version 0.1.0** - Comprehensive Python SDK for the Accumulate Protocol
 
 A complete, production-ready Python client for the Accumulate blockchain featuring comprehensive API coverage, robust transaction handling, multi-signature support, and enterprise-grade reliability.
 
