@@ -13,7 +13,10 @@ from typing import Optional, List, Union
 from ...runtime.url import AccountUrl
 from ...transactions import (
     CreateIdentityBody, CreateKeyBookBody, CreateKeyPageBody,
-    UpdateKeyPageBody, UpdateKeyBody
+    UpdateKeyPageBody, UpdateKeyBody, KeySpecParams,
+    AddKeyOperation, RemoveKeyOperation, UpdateKeyOperation,
+    SetThresholdKeyPageOperation, SetRejectThresholdKeyPageOperation,
+    SetResponseThresholdKeyPageOperation
 )
 from .base import BaseTxBuilder
 
@@ -91,6 +94,11 @@ class CreateKeyPageBuilder(BaseTxBuilder[CreateKeyPageBody]):
 class UpdateKeyPageBuilder(BaseTxBuilder[UpdateKeyPageBody]):
     """Builder for UpdateKeyPage transactions."""
 
+    def __init__(self):
+        """Initialize the builder with empty operations list."""
+        super().__init__()
+        self._fields['operation'] = []
+
     @property
     def tx_type(self) -> str:
         return "UpdateKeyPage"
@@ -99,29 +107,62 @@ class UpdateKeyPageBuilder(BaseTxBuilder[UpdateKeyPageBody]):
     def body_cls(self):
         return UpdateKeyPageBody
 
-    def operation(self, operation: str) -> UpdateKeyPageBuilder:
-        """Set the key page operation (add, remove, update)."""
-        return self.with_field('operation', operation)
+    def add_operation(self, operation: Union[
+        AddKeyOperation, RemoveKeyOperation, UpdateKeyOperation,
+        SetThresholdKeyPageOperation, SetRejectThresholdKeyPageOperation,
+        SetResponseThresholdKeyPageOperation
+    ]) -> UpdateKeyPageBuilder:
+        """Add an operation to the list."""
+        ops = self._fields.get('operation', [])
+        ops.append(operation)
+        return self.with_field('operation', ops)
 
-    def key(self, key: bytes) -> UpdateKeyPageBuilder:
-        """Set the key for the operation."""
-        return self.with_field('key', key)
+    def add_key(self, key_hash: bytes, delegate: Optional[str] = None) -> UpdateKeyPageBuilder:
+        """Add a key to the key page."""
+        entry = KeySpecParams(key_hash=key_hash, delegate=delegate)
+        return self.add_operation(AddKeyOperation(entry=entry))
 
-    def new_key(self, key: bytes) -> UpdateKeyPageBuilder:
-        """Set the new key for update operations."""
-        return self.with_field('newKey', key)
+    def remove_key(self, key_hash: bytes, delegate: Optional[str] = None) -> UpdateKeyPageBuilder:
+        """Remove a key from the key page."""
+        entry = KeySpecParams(key_hash=key_hash, delegate=delegate)
+        return self.add_operation(RemoveKeyOperation(entry=entry))
 
+    def update_key(
+        self,
+        old_key_hash: bytes,
+        new_key_hash: bytes,
+        old_delegate: Optional[str] = None,
+        new_delegate: Optional[str] = None
+    ) -> UpdateKeyPageBuilder:
+        """Update a key on the key page."""
+        old_entry = KeySpecParams(key_hash=old_key_hash, delegate=old_delegate)
+        new_entry = KeySpecParams(key_hash=new_key_hash, delegate=new_delegate)
+        return self.add_operation(UpdateKeyOperation(old_entry=old_entry, new_entry=new_entry))
+
+    def set_threshold(self, threshold: int) -> UpdateKeyPageBuilder:
+        """Set the accept threshold for the key page."""
+        return self.add_operation(SetThresholdKeyPageOperation(threshold=threshold))
+
+    def set_reject_threshold(self, threshold: int) -> UpdateKeyPageBuilder:
+        """Set the reject threshold for the key page."""
+        return self.add_operation(SetRejectThresholdKeyPageOperation(threshold=threshold))
+
+    def set_response_threshold(self, threshold: int) -> UpdateKeyPageBuilder:
+        """Set the response threshold for the key page."""
+        return self.add_operation(SetResponseThresholdKeyPageOperation(threshold=threshold))
+
+    # Legacy methods for backward compatibility
     def add_key_operation(self, key: bytes) -> UpdateKeyPageBuilder:
-        """Configure as an add key operation."""
-        return self.operation('add').key(key)
+        """Legacy: Configure as an add key operation."""
+        return self.add_key(key)
 
     def remove_key_operation(self, key: bytes) -> UpdateKeyPageBuilder:
-        """Configure as a remove key operation."""
-        return self.operation('remove').key(key)
+        """Legacy: Configure as a remove key operation."""
+        return self.remove_key(key)
 
     def update_key_operation(self, old_key: bytes, new_key: bytes) -> UpdateKeyPageBuilder:
-        """Configure as an update key operation."""
-        return self.operation('update').key(old_key).new_key(new_key)
+        """Legacy: Configure as an update key operation."""
+        return self.update_key(old_key, new_key)
 
 
 class UpdateKeyBuilder(BaseTxBuilder[UpdateKeyBody]):

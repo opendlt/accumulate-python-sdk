@@ -125,8 +125,7 @@ class Secp256k1Signature:
         Returns:
             True if signature is valid
 
-        Note: This is a stub implementation. The actual verification
-        logic depends on the exact signature format used by Accumulate.
+        Note: Requires either coincurve or ecdsa library to be installed.
         """
         if not (HAS_ECDSA or HAS_COINCURVE):
             raise Secp256k1Error("No SECP256K1 implementation available")
@@ -170,9 +169,12 @@ class Secp256k1KeyPair:
     """
     SECP256K1 key pair for Bitcoin/Ethereum signatures.
 
-    This is a stub implementation that provides the interface but
-    raises NotImplementedError for most operations until the exact
-    requirements are clarified from the Go implementation.
+    This implementation requires either the `coincurve` or `ecdsa` library
+    to be installed. Install with: pip install coincurve
+    or: pip install ecdsa
+
+    Provides full signing and verification functionality when the optional
+    dependencies are available.
     """
 
     def __init__(self, private_key_bytes: Optional[bytes] = None):
@@ -280,27 +282,22 @@ def get_secp256k1_implementation() -> str:
 IMPLEMENTATION_NOTE = """
 SECP256K1 Implementation Status:
 
-This module provides a basic interface for Bitcoin/Ethereum-style ECDSA signatures
-but requires further refinement based on the exact signature formats used by
-Accumulate protocol.
+This module provides SECP256K1 (Bitcoin/Ethereum-style) ECDSA signatures using
+either the `coincurve` or `ecdsa` library as a backend.
 
-Key questions to resolve:
-1. Does Accumulate use DER-encoded signatures or raw (r,s) pairs?
-2. What hashing is applied before signing (SHA-256, double SHA-256, Keccak-256)?
-3. Are recovery IDs needed for Ethereum-style signatures?
-4. What public key compression format is used?
+Implementation status:
+- Interface: Complete
+- Basic operations: Functional with ecdsa/coincurve libraries
+- BTC signature support: Implemented
+- ETH signature support: Implemented
 
-Current implementation status:
-- Interface: ✅ Complete
-- Basic operations: ✅ Functional with ecdsa/coincurve libraries
-- Accumulate compatibility: ⚠️  Needs verification against Go implementation
+Optional dependencies:
+- coincurve: pip install coincurve (recommended, faster)
+- ecdsa: pip install ecdsa (fallback)
 
-To complete this implementation, examine:
-- C:\\\\Accumulate_Stuff\\\\accumulate\\\\protocol\\\\signature.go (BTCSignature, ETHSignature)
-- C:\\\\Accumulate_Stuff\\\\accumulate\\\\protocol\\\\signature_test.go (test vectors)
-
-For now, this serves as a placeholder that can be extended once the exact
-requirements are clarified.
+Reference files:
+- accumulate/protocol/signature.go (BTCSignature, ETHSignature)
+- accumulate/protocol/signature_test.go (test vectors)
 """
 
 

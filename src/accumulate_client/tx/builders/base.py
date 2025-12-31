@@ -8,7 +8,7 @@ Reference: C:/Accumulate_Stuff/accumulate/protocol/transaction.go
 """
 
 from __future__ import annotations
-from typing import TypeVar, Generic, Type, Dict, Any, Optional
+from typing import TypeVar, Generic, Type, Dict, Any, Optional, List, Union
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 
@@ -17,6 +17,7 @@ from ...runtime.errors import AccumulateError
 from ..codec import to_canonical_json, to_binary, hash_transaction
 from ..validation import validate_tx_body, ValidationError
 from ..fees import estimate_for_body, NetworkParams
+from ..header import ExpireOptions, HoldUntilOptions, TransactionHeader
 
 BodyT = TypeVar('BodyT')
 
@@ -282,44 +283,121 @@ class BaseTxBuilder(Generic[BodyT], ABC):
 
     def build_envelope(
         self,
-        origin: AccountUrl,
+        origin: Union[str, AccountUrl],
         timestamp: Optional[int] = None,
         memo: Optional[str] = None,
+        metadata: Optional[bytes] = None,
+        expire: Optional[ExpireOptions] = None,
+        hold_until: Optional[HoldUntilOptions] = None,
+        authorities: Optional[List[Union[str, AccountUrl]]] = None,
         signer_hint: Optional[str] = None,
+        initiator: Optional[bytes] = None,
         **header_kwargs
     ) -> Any:
         """
-        Build a complete transaction envelope.
+        Build a complete transaction envelope with full header support.
+
+        Matches Go protocol.TransactionHeader with all fields:
+        - principal (origin)
+        - initiator
+        - memo
+        - metadata
+        - expire (ExpireOptions)
+        - holdUntil (HoldUntilOptions)
+        - authorities
 
         Args:
-            origin: Origin account URL
+            origin: Origin/principal account URL
             timestamp: Transaction timestamp (UTC nanoseconds, defaults to now)
-            memo: Optional transaction memo
+            memo: Optional transaction memo (max 256 characters)
+            metadata: Optional binary metadata
+            expire: Expiration options (ExpireOptions) - expires transaction when conditions met
+            hold_until: Hold options (HoldUntilOptions) - holds transaction until conditions met
+            authorities: Additional authorities that must approve the transaction
             signer_hint: Optional signer hint
+            initiator: Optional 32-byte initiator hash
             **header_kwargs: Additional header fields
 
         Returns:
-            Generated transaction envelope/header object
+            Generated transaction envelope/header object matching Go protocol.Transaction
 
         Raises:
             BuilderError: If envelope creation fails
         """
-        # Default timestamp to current time
+        # Default timestamp to current time (nanoseconds since Unix epoch)
         if timestamp is None:
             timestamp = int(datetime.now(timezone.utc).timestamp() * 1_000_000_000)
 
-        # Create header fields
+        # Normalize origin to string
+        if isinstance(origin, AccountUrl):
+            principal_str = str(origin)
+        else:
+            principal_str = origin
+
+        # Create header fields with principal as the primary field name (Go parity)
         header_fields = {
-            'origin': origin,
+            'principal': principal_str,
             'timestamp': timestamp,
             **header_kwargs
         }
 
-        # Add optional fields
+        # Add optional fields if provided
+
+        # Memo - string, max 256 chars
         if memo is not None:
+            if len(memo) > 256:
+                raise BuilderError(f"Memo exceeds maximum length of 256 characters: {len(memo)}")
             header_fields['memo'] = memo
+
+        # Metadata - binary data as hex string
+        if metadata is not None:
+            header_fields['metadata'] = metadata.hex() if isinstance(metadata, bytes) else metadata
+
+        # Expire options - for transaction expiration
+        if expire is not None:
+            if isinstance(expire, ExpireOptions):
+                expire_dict = expire.to_dict()
+                if expire_dict:  # Only add if not empty
+                    header_fields['expire'] = expire_dict
+            elif isinstance(expire, dict):
+                header_fields['expire'] = expire
+            else:
+                raise BuilderError(f"expire must be ExpireOptions or dict, got {type(expire)}")
+
+        # HoldUntil options - for holding transaction until conditions met
+        if hold_until is not None:
+            if isinstance(hold_until, HoldUntilOptions):
+                hold_dict = hold_until.to_dict()
+                if hold_dict:  # Only add if not empty
+                    header_fields['holdUntil'] = hold_dict
+            elif isinstance(hold_until, dict):
+                header_fields['holdUntil'] = hold_until
+            else:
+                raise BuilderError(f"hold_until must be HoldUntilOptions or dict, got {type(hold_until)}")
+
+        # Authorities - list of additional required authorities
+        if authorities is not None:
+            auth_list = []
+            for auth in authorities:
+                if isinstance(auth, AccountUrl):
+                    auth_list.append(str(auth))
+                else:
+                    auth_list.append(auth)
+            if auth_list:
+                header_fields['authorities'] = auth_list
+
+        # Signer hint - optional hint for signature routing
         if signer_hint is not None:
-            header_fields['signer_hint'] = signer_hint
+            header_fields['signerHint'] = signer_hint
+
+        # Initiator - 32-byte hash (typically public key hash)
+        if initiator is not None:
+            if isinstance(initiator, bytes):
+                if len(initiator) != 32:
+                    raise BuilderError(f"initiator must be 32 bytes, got {len(initiator)}")
+                header_fields['initiator'] = initiator.hex()
+            else:
+                header_fields['initiator'] = initiator
 
         # Create body
         body = self.to_body()
@@ -328,6 +406,38 @@ class BaseTxBuilder(Generic[BodyT], ABC):
         # The Transaction struct contains header and body, signatures are handled separately
         transaction = {
             'header': header_fields,
+            'body': body
+        }
+
+        return transaction
+
+    def build_envelope_with_header(
+        self,
+        header: TransactionHeader
+    ) -> Any:
+        """
+        Build a complete transaction envelope using a TransactionHeader object.
+
+        This provides a more structured approach to building envelopes.
+
+        Args:
+            header: TransactionHeader object with all header fields configured
+
+        Returns:
+            Generated transaction envelope matching Go protocol.Transaction
+
+        Raises:
+            BuilderError: If envelope creation fails
+        """
+        # Convert header to dict format
+        header_dict = header.to_dict(by_alias=True, exclude_none=True)
+
+        # Create body
+        body = self.to_body()
+
+        # Create transaction structure
+        transaction = {
+            'header': header_dict,
             'body': body
         }
 
@@ -408,5 +518,9 @@ class BaseTxBuilder(Generic[BodyT], ABC):
 
 __all__ = [
     "BaseTxBuilder",
-    "BuilderError"
+    "BuilderError",
+    # Re-exported from header module for convenience
+    "ExpireOptions",
+    "HoldUntilOptions",
+    "TransactionHeader",
 ]

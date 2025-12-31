@@ -247,8 +247,18 @@ class TypedDataSigner(ETHSigner):
     EIP-712 TypedData signer implementing structured data signing.
 
     This implements the EIP-712 specification for signing typed structured data
-    rather than just raw bytes.
+    rather than just raw bytes. EIP-712 provides a standard way to sign
+    structured data that is both human-readable and secure.
     """
+
+    # Standard EIP-712 domain type
+    EIP712_DOMAIN_TYPE = [
+        {"name": "name", "type": "string"},
+        {"name": "version", "type": "string"},
+        {"name": "chainId", "type": "uint256"},
+        {"name": "verifyingContract", "type": "address"},
+        {"name": "salt", "type": "bytes32"},
+    ]
 
     def get_signature_type(self) -> SignatureType:
         """Return the TypedData signature type."""
@@ -261,16 +271,26 @@ class TypedDataSigner(ETHSigner):
 
         Args:
             domain: EIP-712 domain separator data
-            types: Type definitions
+            types: Type definitions (must include EIP712Domain)
             primary_type: Primary type name
             message: Message data to sign
 
         Returns:
             Signature bytes
         """
+        # Ensure EIP712Domain is in types
+        full_types = dict(types)
+        if "EIP712Domain" not in full_types:
+            # Add only the fields present in domain
+            domain_fields = []
+            for field in self.EIP712_DOMAIN_TYPE:
+                if field["name"] in domain:
+                    domain_fields.append(field)
+            full_types["EIP712Domain"] = domain_fields
+
         # Compute EIP-712 hash
-        domain_hash = self._hash_struct("EIP712Domain", domain, types)
-        message_hash = self._hash_struct(primary_type, message, types)
+        domain_hash = self._hash_struct("EIP712Domain", domain, full_types)
+        message_hash = self._hash_struct(primary_type, message, full_types)
 
         # EIP-712 encoding: \x19\x01 + domain_hash + message_hash
         eip712_hash = keccak256(b"\x19\x01" + domain_hash + message_hash)
@@ -282,6 +302,8 @@ class TypedDataSigner(ETHSigner):
         """
         Hash a struct according to EIP-712.
 
+        hashStruct(s) = keccak256(typeHash || encodeData(s))
+
         Args:
             primary_type: Name of the primary type
             data: Data to hash
@@ -290,27 +312,263 @@ class TypedDataSigner(ETHSigner):
         Returns:
             32-byte hash of the struct
         """
-        # This is a simplified implementation
-        # Real EIP-712 requires proper type encoding according to the specification
+        # Get type hash: keccak256(encodeType(primaryType))
+        type_string = self._encode_type(primary_type, types)
+        type_hash = keccak256(type_string.encode('utf-8'))
 
-        # Encode type definition
-        type_hash = keccak256(self._encode_type(primary_type, types).encode())
-
-        # Encode data
+        # Encode data according to type
         encoded_data = self._encode_data(primary_type, data, types)
 
         return keccak256(type_hash + encoded_data)
 
     def _encode_type(self, primary_type: str, types: Dict[str, Any]) -> str:
-        """Encode type definition string for EIP-712."""
-        # Simplified implementation - real EIP-712 has specific rules
-        return f"{primary_type}(...)"  # Placeholder
+        """
+        Encode type definition string for EIP-712.
+
+        The type of a struct is encoded as:
+        name ‖ "(" ‖ member₁ ‖ "," ‖ member₂ ‖ "," ‖ … ‖ memberₙ ")"
+
+        Args:
+            primary_type: Primary type name
+            types: All type definitions
+
+        Returns:
+            Encoded type string
+        """
+        # Find all dependencies (referenced types)
+        deps = self._find_type_dependencies(primary_type, types, set())
+
+        # Sort dependencies alphabetically (excluding primary type)
+        deps.discard(primary_type)
+        sorted_deps = sorted(deps)
+
+        # Primary type first, then dependencies
+        all_types = [primary_type] + sorted_deps
+
+        result_parts = []
+        for type_name in all_types:
+            if type_name not in types:
+                continue
+            fields = types[type_name]
+            field_strs = [f"{f['type']} {f['name']}" for f in fields]
+            result_parts.append(f"{type_name}({','.join(field_strs)})")
+
+        return "".join(result_parts)
+
+    def _find_type_dependencies(self, type_name: str, types: Dict[str, Any],
+                                 found: set) -> set:
+        """
+        Recursively find all type dependencies.
+
+        Args:
+            type_name: Type to find dependencies for
+            types: All type definitions
+            found: Already found dependencies
+
+        Returns:
+            Set of all dependent type names
+        """
+        if type_name not in types or type_name in found:
+            return found
+
+        found.add(type_name)
+
+        for field in types[type_name]:
+            field_type = field["type"]
+            # Handle arrays
+            if field_type.endswith("[]"):
+                field_type = field_type[:-2]
+            # Check if it's a struct type (not a primitive)
+            if field_type in types:
+                self._find_type_dependencies(field_type, types, found)
+
+        return found
 
     def _encode_data(self, primary_type: str, data: Dict[str, Any],
                     types: Dict[str, Any]) -> bytes:
-        """Encode data according to EIP-712."""
-        # Simplified implementation - real EIP-712 has specific encoding rules
-        return b""  # Placeholder
+        """
+        Encode data according to EIP-712.
+
+        encodeData(s) = enc(value₁) ‖ enc(value₂) ‖ … ‖ enc(valueₙ)
+
+        Args:
+            primary_type: Type name
+            data: Data to encode
+            types: Type definitions
+
+        Returns:
+            Encoded data bytes
+        """
+        if primary_type not in types:
+            raise ValueError(f"Type {primary_type} not found in types")
+
+        encoded_values = b""
+
+        for field in types[primary_type]:
+            field_name = field["name"]
+            field_type = field["type"]
+            value = data.get(field_name)
+
+            encoded_values += self._encode_value(field_type, value, types)
+
+        return encoded_values
+
+    def _encode_value(self, field_type: str, value: Any, types: Dict[str, Any]) -> bytes:
+        """
+        Encode a single value according to its type.
+
+        Args:
+            field_type: Type of the field
+            value: Value to encode
+            types: Type definitions
+
+        Returns:
+            32-byte encoded value
+        """
+        # Handle None values
+        if value is None:
+            return bytes(32)
+
+        # Handle arrays
+        if field_type.endswith("[]"):
+            element_type = field_type[:-2]
+            if not isinstance(value, (list, tuple)):
+                value = [value]
+            # Array encoding: keccak256(concat(encodeData(element) for element in array))
+            encoded_elements = b"".join(
+                self._encode_value(element_type, v, types) for v in value
+            )
+            return keccak256(encoded_elements)
+
+        # Handle struct types (referenced types)
+        if field_type in types:
+            return self._hash_struct(field_type, value, types)
+
+        # Handle atomic types
+        return self._encode_atomic_type(field_type, value)
+
+    def _encode_atomic_type(self, field_type: str, value: Any) -> bytes:
+        """
+        Encode an atomic (non-struct) type.
+
+        Args:
+            field_type: Type name (e.g., 'uint256', 'address', 'bytes32')
+            value: Value to encode
+
+        Returns:
+            32-byte encoded value
+        """
+        # bytes - dynamic, encoded as keccak256
+        if field_type == "bytes":
+            if isinstance(value, str):
+                value = bytes.fromhex(value.replace("0x", ""))
+            return keccak256(value)
+
+        # string - dynamic, encoded as keccak256 of UTF-8
+        if field_type == "string":
+            if isinstance(value, bytes):
+                value = value.decode('utf-8')
+            return keccak256(value.encode('utf-8'))
+
+        # bool - encoded as uint256
+        if field_type == "bool":
+            return (1 if value else 0).to_bytes(32, 'big')
+
+        # address - 20 bytes, left-padded to 32
+        if field_type == "address":
+            if isinstance(value, str):
+                value = value.replace("0x", "")
+                addr_bytes = bytes.fromhex(value)
+            else:
+                addr_bytes = value
+            return bytes(12) + addr_bytes[-20:]
+
+        # bytesN (bytes1 to bytes32) - right-padded to 32
+        if field_type.startswith("bytes") and field_type[5:].isdigit():
+            n = int(field_type[5:])
+            if isinstance(value, str):
+                value = bytes.fromhex(value.replace("0x", ""))
+            return value[:n].ljust(32, b'\x00')
+
+        # uintN / intN - left-padded to 32 bytes
+        if field_type.startswith("uint") or field_type.startswith("int"):
+            is_signed = field_type.startswith("int")
+            if isinstance(value, str):
+                value = int(value, 0)  # Handle hex strings
+
+            if is_signed and value < 0:
+                # Two's complement for negative numbers
+                value = (1 << 256) + value
+
+            return value.to_bytes(32, 'big')
+
+        # Unknown type - try to encode as bytes
+        if isinstance(value, bytes):
+            return value.ljust(32, b'\x00')[:32]
+        if isinstance(value, str):
+            return bytes.fromhex(value.replace("0x", "")).ljust(32, b'\x00')[:32]
+        if isinstance(value, int):
+            return value.to_bytes(32, 'big')
+
+        raise ValueError(f"Cannot encode type {field_type} with value {value}")
+
+    def to_accumulate_signature(self, transaction_hash: bytes, **kwargs) -> dict:
+        """
+        Create an Accumulate protocol TypedData signature.
+
+        Args:
+            transaction_hash: Transaction hash to sign
+            **kwargs: Optional fields including typed_data for EIP-712
+
+        Returns:
+            Dictionary with signature data
+        """
+        # Check if typed_data is provided for EIP-712 signing
+        typed_data = kwargs.pop("typed_data", None)
+
+        if typed_data:
+            # Sign using EIP-712
+            domain = typed_data.get("domain", {})
+            types = typed_data.get("types", {})
+            primary_type = typed_data.get("primaryType", "")
+            message = typed_data.get("message", {})
+
+            signature_bytes = self.sign_typed_data(domain, types, primary_type, message)
+        else:
+            # Fall back to standard signing
+            signature_bytes = self.sign(transaction_hash)
+
+        # Get public key bytes
+        public_key_bytes = self.get_public_key()
+
+        signature = {
+            'type': 'typedData',
+            'publicKey': public_key_bytes.hex(),
+            'signature': signature_bytes.hex(),
+            'signer': {
+                'url': str(self.get_signer_url()),
+                'version': self.get_signer_version()
+            },
+            'signerVersion': self.get_signer_version(),
+            'timestamp': kwargs.get('timestamp', self.timestamp),
+            'vote': kwargs.get('vote', self.get_vote()),
+            'transactionHash': transaction_hash.hex()
+        }
+
+        # Add typed data info if present
+        if typed_data:
+            signature['typedData'] = {
+                'primaryType': typed_data.get("primaryType", ""),
+                'domain': typed_data.get("domain", {})
+            }
+
+        # Add optional fields
+        if 'memo' in kwargs:
+            signature['memo'] = kwargs['memo']
+        if 'data' in kwargs:
+            signature['data'] = kwargs['data'].hex() if isinstance(kwargs['data'], bytes) else kwargs['data']
+
+        return signature
 
 
 class ETHVerifier(Verifier):

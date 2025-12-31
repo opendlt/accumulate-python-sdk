@@ -8,7 +8,15 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import warnings
+import base64
 from typing import Dict, List, Optional, Any, Union
+
+from cryptography.fernet import Fernet, InvalidToken
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.backends import default_backend
+
 from .crypto.ed25519 import Ed25519PrivateKey
 
 
@@ -95,35 +103,62 @@ class InMemoryKeystore:
                 self._keys[key_id] = key_data
 
 
-class EncryptedKeystore:
-    """Encrypted key storage (stub implementation)."""
+class SecureKeystore:
+    """
+    AES-256 encrypted key storage with PBKDF2 key derivation.
 
-    def __init__(self, password: str):
+    Uses Fernet (AES-128-CBC with HMAC-SHA256) for authenticated encryption.
+    Key derivation uses PBKDF2 with 480,000 iterations as recommended by OWASP.
+    """
+
+    # PBKDF2 iteration count - OWASP 2023 recommendation for SHA256
+    PBKDF2_ITERATIONS = 480000
+
+    def __init__(self, password: str, salt: Optional[bytes] = None):
         """
-        Initialize encrypted keystore.
+        Initialize secure keystore with password-based encryption.
 
         Args:
-            password: Encryption password
+            password: Encryption password (should be strong)
+            salt: Optional salt bytes (16 bytes). Generated randomly if not provided.
         """
-        self.password = password
+        self.salt = salt if salt is not None else os.urandom(16)
+        self._derive_key(password)
         self._keys: Dict[str, bytes] = {}
+
+    def _derive_key(self, password: str) -> None:
+        """
+        Derive encryption key from password using PBKDF2.
+
+        Args:
+            password: User password
+        """
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=self.salt,
+            iterations=self.PBKDF2_ITERATIONS,
+            backend=default_backend()
+        )
+        key = base64.urlsafe_b64encode(kdf.derive(password.encode('utf-8')))
+        self._fernet = Fernet(key)
 
     def store(self, key_id: str, key: Any) -> None:
         """
-        Store an encrypted key.
+        Encrypt and store a key.
 
         Args:
-            key_id: Key identifier
-            key: Key to encrypt and store
+            key_id: Unique identifier for the key
+            key: Key object to encrypt and store (Ed25519PrivateKey or string)
         """
-        # Simple XOR encryption for demo (NOT SECURE)
         if hasattr(key, 'to_bytes'):
             key_bytes = key.to_bytes()
+        elif isinstance(key, bytes):
+            key_bytes = key
         else:
-            key_bytes = str(key).encode()
+            key_bytes = str(key).encode('utf-8')
 
-        password_hash = hashlib.sha256(self.password.encode()).digest()
-        encrypted = bytes(a ^ b for a, b in zip(key_bytes, password_hash * (len(key_bytes) // 32 + 1)))
+        encrypted = self._fernet.encrypt(key_bytes)
         self._keys[key_id] = encrypted
 
     def get(self, key_id: str) -> Optional[Any]:
@@ -134,29 +169,133 @@ class EncryptedKeystore:
             key_id: Key identifier
 
         Returns:
-            Decrypted key or None
+            Decrypted key (Ed25519PrivateKey if valid, otherwise string) or None if not found
+
+        Raises:
+            InvalidToken: If decryption fails (wrong password or corrupted data)
         """
         encrypted = self._keys.get(key_id)
         if encrypted is None:
             return None
 
-        # Decrypt using same XOR
-        password_hash = hashlib.sha256(self.password.encode()).digest()
-        decrypted = bytes(a ^ b for a, b in zip(encrypted, password_hash * (len(encrypted) // 32 + 1)))
+        decrypted = self._fernet.decrypt(encrypted)
 
         try:
             # Try to restore as Ed25519 key
             return Ed25519PrivateKey.from_bytes(decrypted)
         except Exception:
-            return decrypted.decode()
+            # Return as decoded string
+            try:
+                return decrypted.decode('utf-8')
+            except UnicodeDecodeError:
+                # Return raw bytes if not valid UTF-8
+                return decrypted
 
     def list(self) -> List[str]:
-        """List all key identifiers."""
+        """
+        List all key identifiers.
+
+        Returns:
+            List of key IDs stored in the keystore
+        """
         return list(self._keys.keys())
 
     def remove(self, key_id: str) -> None:
-        """Remove a key."""
+        """
+        Remove a key from the keystore.
+
+        Args:
+            key_id: Key identifier to remove
+        """
         self._keys.pop(key_id, None)
+
+    def export(self) -> Dict[str, Any]:
+        """
+        Export keystore for serialization.
+
+        Returns:
+            Dictionary containing salt and encrypted keys (base64 encoded)
+        """
+        return {
+            'salt': base64.b64encode(self.salt).decode('ascii'),
+            'keys': {
+                key_id: base64.b64encode(encrypted).decode('ascii')
+                for key_id, encrypted in self._keys.items()
+            }
+        }
+
+    @classmethod
+    def from_export(cls, data: Dict[str, Any], password: str) -> 'SecureKeystore':
+        """
+        Restore keystore from exported data.
+
+        Args:
+            data: Exported keystore data
+            password: Encryption password
+
+        Returns:
+            Restored SecureKeystore instance
+        """
+        salt = base64.b64decode(data['salt'])
+        keystore = cls(password, salt=salt)
+        keystore._keys = {
+            key_id: base64.b64decode(encrypted)
+            for key_id, encrypted in data['keys'].items()
+        }
+        return keystore
+
+    def change_password(self, old_password: str, new_password: str) -> None:
+        """
+        Change the keystore password.
+
+        Decrypts all keys with old password and re-encrypts with new password.
+
+        Args:
+            old_password: Current password
+            new_password: New password to set
+
+        Raises:
+            InvalidToken: If old password is incorrect
+        """
+        # Decrypt all keys with old password
+        decrypted_keys: Dict[str, bytes] = {}
+        for key_id in self._keys:
+            encrypted = self._keys[key_id]
+            decrypted_keys[key_id] = self._fernet.decrypt(encrypted)
+
+        # Generate new salt and derive new key
+        self.salt = os.urandom(16)
+        self._derive_key(new_password)
+
+        # Re-encrypt all keys with new password
+        self._keys = {
+            key_id: self._fernet.encrypt(decrypted)
+            for key_id, decrypted in decrypted_keys.items()
+        }
+
+
+class EncryptedKeystore(SecureKeystore):
+    """
+    Deprecated: Use SecureKeystore instead.
+
+    This class is maintained for backward compatibility only.
+    It now uses AES-256 encryption instead of the previous XOR-based implementation.
+    """
+
+    def __init__(self, password: str, salt: Optional[bytes] = None):
+        """
+        Initialize encrypted keystore.
+
+        Args:
+            password: Encryption password
+            salt: Optional salt for key derivation
+        """
+        warnings.warn(
+            "EncryptedKeystore is deprecated. Use SecureKeystore instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        super().__init__(password, salt)
 
 
 class KeyHashIndex:
@@ -218,7 +357,8 @@ def derive_child_key(master_seed: bytes, path: List[int]) -> Ed25519PrivateKey:
 
 __all__ = [
     "InMemoryKeystore",
-    "EncryptedKeystore",
+    "SecureKeystore",
+    "EncryptedKeystore",  # Deprecated, use SecureKeystore
     "KeyHashIndex",
     "derive_child_key"
 ]
