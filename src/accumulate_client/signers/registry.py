@@ -20,6 +20,16 @@ from .legacy_ed25519 import LegacyEd25519Signer as ImportedLegacyEd25519Signer, 
 from ..crypto.ed25519 import Ed25519KeyPair
 from ..crypto.secp256k1 import Secp256k1KeyPair, has_secp256k1_support
 
+# Import real signer implementations
+from .delegated import DelegatedSigner
+from .authority import AuthoritySigner
+from .signature_set import SignatureSetSigner
+from .remote import RemoteSignatureSigner
+from .btc import BTCSigner as ImportedBTCSigner, BTCLegacySigner as ImportedBTCLegacySigner
+from .rsa import RSASigner, has_rsa_support
+from .ecdsa_sha256 import ECDSASigner, has_ecdsa_support
+from .eth import ETHSigner as ImportedETHSigner, TypedDataSigner
+
 logger = logging.getLogger(__name__)
 
 
@@ -207,6 +217,199 @@ class StubSigner(Signer):
         return b""
 
 
+# Adapter classes for real implementations that need different constructors
+class BTCLegacySigner(UserSigner):
+    """BTCLegacy adapter for registry compatibility."""
+
+    def __init__(self, key_pair: Secp256k1KeyPair, signer_url: AccountUrl):
+        if not has_secp256k1_support():
+            raise SignatureRegistryError("SECP256K1 support not available")
+        self._signer = ImportedBTCLegacySigner(key_pair.private_key, str(signer_url))
+        self.key_pair = key_pair
+        self.signer_url = signer_url
+
+    def get_signature_type(self) -> SignatureType:
+        return SignatureType.BTCLEGACY
+
+    def get_signer_url(self) -> AccountUrl:
+        return self.signer_url
+
+    def get_signature_bytes(self, digest: bytes) -> bytes:
+        return self._signer.sign(digest)
+
+    def verify(self, signature: bytes, digest: bytes) -> bool:
+        return self._signer.verify(signature, digest)
+
+    def get_public_key(self) -> bytes:
+        return self.key_pair.public_key_bytes
+
+
+class RSASignerAdapter(UserSigner):
+    """RSA adapter for registry compatibility."""
+
+    def __init__(self, private_key, signer_url: AccountUrl):
+        self._signer = RSASigner(private_key, str(signer_url))
+        self.signer_url = signer_url
+
+    def get_signature_type(self) -> SignatureType:
+        return SignatureType.RSASHA256
+
+    def get_signer_url(self) -> AccountUrl:
+        return self.signer_url
+
+    def get_signature_bytes(self, digest: bytes) -> bytes:
+        return self._signer.sign(digest)
+
+    def verify(self, signature: bytes, digest: bytes) -> bool:
+        return self._signer.verify(signature, digest)
+
+    def get_public_key(self) -> bytes:
+        return self._signer.get_public_key()
+
+
+class ECDSASignerAdapter(UserSigner):
+    """ECDSA adapter for registry compatibility."""
+
+    def __init__(self, private_key, signer_url: AccountUrl):
+        self._signer = ECDSASigner(private_key, str(signer_url))
+        self.signer_url = signer_url
+
+    def get_signature_type(self) -> SignatureType:
+        return SignatureType.ECDSASHA256
+
+    def get_signer_url(self) -> AccountUrl:
+        return self.signer_url
+
+    def get_signature_bytes(self, digest: bytes) -> bytes:
+        return self._signer.sign(digest)
+
+    def verify(self, signature: bytes, digest: bytes) -> bool:
+        return self._signer.verify(signature, digest)
+
+    def get_public_key(self) -> bytes:
+        return self._signer.get_public_key()
+
+
+class TypedDataSignerAdapter(UserSigner):
+    """TypedData adapter for registry compatibility."""
+
+    def __init__(self, private_key, signer_url: AccountUrl):
+        from ..crypto.secp256k1 import Secp256k1PrivateKey
+        if isinstance(private_key, Secp256k1PrivateKey):
+            self._signer = TypedDataSigner(private_key, str(signer_url))
+        else:
+            # Assume it's a key pair
+            self._signer = TypedDataSigner(private_key.private_key, str(signer_url))
+        self.signer_url = signer_url
+
+    def get_signature_type(self) -> SignatureType:
+        return SignatureType.TYPEDDATA
+
+    def get_signer_url(self) -> AccountUrl:
+        return self.signer_url
+
+    def get_signature_bytes(self, digest: bytes) -> bytes:
+        return self._signer.sign(digest)
+
+    def verify(self, signature: bytes, digest: bytes) -> bool:
+        return self._signer.verify(signature, digest)
+
+    def get_public_key(self) -> bytes:
+        return self._signer.get_public_key()
+
+
+class DelegatedSignerAdapter(Signer):
+    """Delegated signer adapter for registry compatibility."""
+
+    def __init__(self, wrapped_signer: Signer, delegator: AccountUrl):
+        self._signer = DelegatedSigner(wrapped_signer, delegator)
+        self.signer_url = wrapped_signer.get_signer_url()
+
+    def get_signature_type(self) -> SignatureType:
+        return SignatureType.DELEGATED
+
+    def get_signer_url(self) -> AccountUrl:
+        return self.signer_url
+
+    def sign(self, digest: bytes) -> bytes:
+        return self._signer.sign(digest)
+
+    def verify(self, signature: bytes, digest: bytes) -> bool:
+        return self._signer.verify(signature, digest)
+
+    def get_public_key(self) -> bytes:
+        return self._signer.get_public_key()
+
+
+class AuthoritySignerAdapter(Signer):
+    """Authority signer adapter for registry compatibility."""
+
+    def __init__(self, origin: AccountUrl, authority: AccountUrl, tx_id: str, **kwargs):
+        self._signer = AuthoritySigner(origin, authority, tx_id, **kwargs)
+        self.signer_url = origin
+
+    def get_signature_type(self) -> SignatureType:
+        return SignatureType.AUTHORITY
+
+    def get_signer_url(self) -> AccountUrl:
+        return self.signer_url
+
+    def sign(self, digest: bytes) -> bytes:
+        return self._signer.sign(digest)
+
+    def verify(self, signature: bytes, digest: bytes) -> bool:
+        return self._signer.verify(signature, digest)
+
+    def get_public_key(self) -> bytes:
+        return self._signer.get_public_key()
+
+
+class SignatureSetSignerAdapter(Signer):
+    """SignatureSet adapter for registry compatibility."""
+
+    def __init__(self, signer_url: AccountUrl, authority: AccountUrl, **kwargs):
+        self._signer = SignatureSetSigner(signer_url, authority, **kwargs)
+        self.signer_url = signer_url
+
+    def get_signature_type(self) -> SignatureType:
+        return SignatureType.SET
+
+    def get_signer_url(self) -> AccountUrl:
+        return self.signer_url
+
+    def sign(self, digest: bytes) -> bytes:
+        return self._signer.sign(digest)
+
+    def verify(self, signature: bytes, digest: bytes) -> bool:
+        return self._signer.verify(signature, digest)
+
+    def get_public_key(self) -> bytes:
+        return self._signer.get_public_key()
+
+
+class RemoteSignerAdapter(Signer):
+    """Remote signer adapter for registry compatibility."""
+
+    def __init__(self, destination: AccountUrl, inner_signature: dict, **kwargs):
+        self._signer = RemoteSignatureSigner(destination, inner_signature, **kwargs)
+        self.signer_url = destination
+
+    def get_signature_type(self) -> SignatureType:
+        return SignatureType.REMOTE
+
+    def get_signer_url(self) -> AccountUrl:
+        return self.signer_url
+
+    def sign(self, digest: bytes) -> bytes:
+        return self._signer.sign(digest)
+
+    def verify(self, signature: bytes, digest: bytes) -> bool:
+        return self._signer.verify(signature, digest)
+
+    def get_public_key(self) -> bytes:
+        return self._signer.get_public_key()
+
+
 class SignatureRegistry:
     """
     Registry for all 16 signature types.
@@ -215,24 +418,27 @@ class SignatureRegistry:
     """
 
     # Mapping from SignatureType to signer class
+    # All 16 signature types are now fully implemented
     SIGNER_CLASSES: Dict[SignatureType, Type[Signer]] = {
+        # Key-based user signatures
         SignatureType.ED25519: Ed25519Signer,
         SignatureType.LEGACYED25519: LegacyEd25519Signer,
         SignatureType.BTC: BTCSigner,
+        SignatureType.BTCLEGACY: BTCLegacySigner,
         SignatureType.ETH: ETHSigner,
         SignatureType.RCD1: RCD1Signer,
+        SignatureType.RSASHA256: RSASignerAdapter,
+        SignatureType.ECDSASHA256: ECDSASignerAdapter,
+        SignatureType.TYPEDDATA: TypedDataSignerAdapter,
+        # Protocol signatures
+        SignatureType.DELEGATED: DelegatedSignerAdapter,
+        SignatureType.AUTHORITY: AuthoritySignerAdapter,
+        SignatureType.SET: SignatureSetSignerAdapter,
+        SignatureType.REMOTE: RemoteSignerAdapter,
+        # System signatures
         SignatureType.RECEIPT: ReceiptSigner,
         SignatureType.PARTITION: PartitionSigner,
         SignatureType.INTERNAL: InternalSigner,
-        # Remaining types use stub implementation
-        SignatureType.SET: StubSigner,
-        SignatureType.REMOTE: StubSigner,
-        SignatureType.BTCLEGACY: StubSigner,
-        SignatureType.DELEGATED: StubSigner,
-        SignatureType.AUTHORITY: StubSigner,
-        SignatureType.RSASHA256: StubSigner,
-        SignatureType.ECDSASHA256: StubSigner,
-        SignatureType.TYPEDDATA: StubSigner,
     }
 
     # String mappings (matching Go implementation)
