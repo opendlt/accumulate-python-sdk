@@ -52,7 +52,7 @@ def test_transaction_header_all_fields():
     assert header.hold_until.minor_block == hold_block
     assert header.authorities == authorities
 
-    print("✅ All transaction header fields present and working!")
+    print("[OK] All transaction header fields present and working!")
 
 
 def test_transaction_header_required_fields_only():
@@ -78,7 +78,7 @@ def test_transaction_header_required_fields_only():
     assert header.hold_until is None
     assert header.authorities is None
 
-    print("✅ Required fields work, optional fields properly default to None!")
+    print("[OK] Required fields work, optional fields properly default to None!")
 
 
 def test_expire_options_completeness():
@@ -93,7 +93,7 @@ def test_expire_options_completeness():
     expire_opts_empty = ExpireOptions()
     assert expire_opts_empty.at_time is None
 
-    print("✅ ExpireOptions complete and working!")
+    print("[OK] ExpireOptions complete and working!")
 
 
 def test_hold_until_options_completeness():
@@ -108,7 +108,7 @@ def test_hold_until_options_completeness():
     hold_opts_empty = HoldUntilOptions()
     assert hold_opts_empty.minor_block is None
 
-    print("✅ HoldUntilOptions complete and working!")
+    print("[OK] HoldUntilOptions complete and working!")
 
 
 def test_transaction_header_json_serialization():
@@ -141,7 +141,7 @@ def test_transaction_header_json_serialization():
     assert 'at_time' in json_data['expire']
     assert 'minor_block' in json_data['hold_until']
 
-    print("✅ JSON serialization includes all fields!")
+    print("[OK] JSON serialization includes all fields!")
 
 
 def test_transaction_header_field_types():
@@ -161,7 +161,7 @@ def test_transaction_header_field_types():
     assert header.hold_until is None or isinstance(header.hold_until, HoldUntilOptions)  # *HoldUntilOptions
     assert header.authorities is None or isinstance(header.authorities, list)  # []*url.URL -> List[AccountUrl]
 
-    print("✅ All field types match Go reference!")
+    print("[OK] All field types match Go reference!")
 
 
 def test_transaction_header_edge_cases():
@@ -194,7 +194,7 @@ def test_transaction_header_edge_cases():
     )
     assert len(header3.metadata) == 10000
 
-    print("✅ Edge cases handled correctly!")
+    print("[OK] Edge cases handled correctly!")
 
 
 def test_go_reference_compliance():
@@ -227,19 +227,19 @@ def test_go_reference_compliance():
     # Verify all Go fields have Python equivalents
     for go_field, python_field in go_fields.items():
         assert hasattr(header, python_field), f"Missing Python field for Go {go_field}"
-        print(f"  ✅ {go_field} -> {python_field}")
+        print(f"  [OK] {go_field} -> {python_field}")
 
     # Verify ExpireOptions compliance
     expire_test = ExpireOptions()
     assert hasattr(expire_test, 'at_time'), "ExpireOptions missing at_time field"
-    print("  ✅ ExpireOptions.AtTime -> ExpireOptions.at_time")
+    print("  [OK] ExpireOptions.AtTime -> ExpireOptions.at_time")
 
     # Verify HoldUntilOptions compliance
     hold_test = HoldUntilOptions()
     assert hasattr(hold_test, 'minor_block'), "HoldUntilOptions missing minor_block field"
-    print("  ✅ HoldUntilOptions.MinorBlock -> HoldUntilOptions.minor_block")
+    print("  [OK] HoldUntilOptions.MinorBlock -> HoldUntilOptions.minor_block")
 
-    print("\\n✅ COMPLETE: Python SDK is 100% compliant with Go reference!")
+    print("\\n[OK] COMPLETE: Python SDK is 100% compliant with Go reference!")
 
 
 if __name__ == "__main__":

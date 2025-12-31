@@ -105,10 +105,10 @@ def main():
         if 'transactionHash' in faucet_data:
             print_tx_hash(faucet_data['transactionHash'], "Faucet")
         else:
-            print("✅ Faucet request completed")
+            print("[OK] Faucet request completed")
 
     except Exception as e:
-        print(f"❌ Faucet request failed: {e}")
+        print(f"[FAIL] Faucet request failed: {e}")
         print("💡 Make sure the devnet is running and faucet is available")
         sys.exit(1)
 

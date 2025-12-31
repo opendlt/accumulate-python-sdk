@@ -28,12 +28,12 @@ def assert_hex_equal(actual: bytes, expected_hex: str, ctx: str) -> None:
     # Generate detailed diff for mismatch
     expected_bytes = bytes.fromhex(expected_hex)
 
-    print(f"\n❌ Binary parity mismatch in {ctx}")
+    print(f"\n[FAIL] Binary parity mismatch in {ctx}")
     print(f"   Expected length: {len(expected_bytes)} bytes")
     print(f"   Actual length:   {len(actual)} bytes")
 
     if len(actual) != len(expected_bytes):
-        print("   ⚠️  Length mismatch!")
+        print("   [WARN]  Length mismatch!")
 
     # Generate unified diff of hex rows (16 bytes per row)
     print("\n   Hex diff (16 bytes per row):")

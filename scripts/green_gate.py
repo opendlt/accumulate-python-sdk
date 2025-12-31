@@ -54,11 +54,11 @@ class GreenGate:
 
     def ok(self, msg: str) -> None:
         """Print success message."""
-        print(f"✅ {msg}")
+        print(f"[OK] {msg}")
 
     def fail(self, msg: str) -> None:
         """Print failure message."""
-        print(f"❌ {msg}")
+        print(f"[FAIL] {msg}")
 
     def info(self, msg: str) -> None:
         """Print info message."""

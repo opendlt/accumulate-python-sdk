@@ -134,7 +134,7 @@ class StreamingExample:
 
             logger.info("🎯 Transaction tracking results:")
             for tx_id, event in results.items():
-                status_emoji = "✅" if event.status == "delivered" else "❌"
+                status_emoji = "[OK]" if event.status == "delivered" else "[FAIL]"
                 logger.info(f"   {status_emoji} {tx_id}: {event.status}")
 
         except asyncio.TimeoutError:
@@ -161,8 +161,8 @@ class StreamingExample:
 
                 status_emoji = {
                     "pending": "⏳",
-                    "delivered": "✅",
-                    "failed": "❌",
+                    "delivered": "[OK]",
+                    "failed": "[FAIL]",
                     "unknown": "❓"
                 }.get(tx_event.status, "❓")
 
@@ -221,7 +221,7 @@ class StreamingExample:
                 level_emoji = {
                     "debug": "🐛",
                     "info": "ℹ️",
-                    "warn": "⚠️",
+                    "warn": "[WARN]",
                     "error": "🚨"
                 }.get(log_event.level, "📝")
 

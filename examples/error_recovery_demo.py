@@ -164,7 +164,7 @@ class ErrorRecoveryDemo:
 
     async def demo_circuit_breaker(self):
         """Demonstrate circuit breaker patterns."""
-        logger.info("⚡ Demonstrating circuit breaker...")
+        logger.info("[FAST] Demonstrating circuit breaker...")
 
         # Create circuit breaker
         config = CircuitBreakerConfig(
@@ -447,7 +447,7 @@ class ErrorRecoveryDemo:
 
             await self.demo_error_monitoring()
 
-            logger.info("✅ Error recovery demo completed successfully!")
+            logger.info("[OK] Error recovery demo completed successfully!")
 
         except Exception as e:
             logger.error(f"Demo failed: {e}")

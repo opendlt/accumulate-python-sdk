@@ -128,7 +128,7 @@ class DevnetRunner:
             actions = result.get('actions', [])
 
             if actions_taken > 0:
-                print(f"✅ Auto-repair applied {actions_taken} fixes:")
+                print(f"[OK] Auto-repair applied {actions_taken} fixes:")
                 for action in actions:
                     print(f"  - {action}")
                 return True
@@ -140,7 +140,7 @@ class DevnetRunner:
             print("ℹ️  Auto-repair not available")
             return False
         except Exception as e:
-            print(f"❌ Auto-repair failed: {e}")
+            print(f"[FAIL] Auto-repair failed: {e}")
             return False
 
     def stage_1_tests_coverage(self) -> bool:
@@ -261,7 +261,7 @@ class DevnetRunner:
         for script_name, extra_args in examples:
             script_path = self.project_root / "examples" / script_name
             if not script_path.exists():
-                print(f"⚠️  Example not found: {script_name}")
+                print(f"[WARN]  Example not found: {script_name}")
                 continue
 
             print(f"\n🔄 Running {script_name} against devnet...")
@@ -276,11 +276,11 @@ class DevnetRunner:
             # Try devnet first
             rc, stdout, stderr = self.run_command(cmd, env=env, timeout=180)
 
-            if rc == 0 and ("SUCCESS" in stdout or "success" in stdout or "✅" in stdout):
-                print(f"✅ {script_name} succeeded on devnet")
+            if rc == 0 and ("SUCCESS" in stdout or "success" in stdout or "[OK]" in stdout):
+                print(f"[OK] {script_name} succeeded on devnet")
                 success_count += 1
             else:
-                print(f"❌ {script_name} failed on devnet, trying auto-fix and mock...")
+                print(f"[FAIL] {script_name} failed on devnet, trying auto-fix and mock...")
 
                 # Apply auto-fix
                 self.apply_auto_fix("examples", stdout, stderr)
@@ -293,10 +293,10 @@ class DevnetRunner:
                 rc2, stdout2, stderr2 = self.run_command(cmd_mock, env=env_mock, timeout=60)
 
                 if rc2 == 0 and ("SUCCESS" in stdout2 or "success" in stdout2):
-                    print(f"✅ {script_name} succeeded with --mock after auto-fix")
+                    print(f"[OK] {script_name} succeeded with --mock after auto-fix")
                     success_count += 1
                 else:
-                    print(f"❌ {script_name} failed even with --mock")
+                    print(f"[FAIL] {script_name} failed even with --mock")
 
         elapsed = time.time() - start_time
         all_success = success_count == total_examples

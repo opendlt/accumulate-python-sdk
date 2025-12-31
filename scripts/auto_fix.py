@@ -671,7 +671,7 @@ def make_client(endpoint: str, ws_endpoint: Optional[str] = None, profile: str =
 def tassert(condition: bool, message: str) -> None:
     """Simple assert helper."""
     if not condition:
-        print(f"❌ ASSERTION FAILED: {message}")
+        print(f"[FAIL] ASSERTION FAILED: {message}")
         sys.exit(1)
 
 
@@ -689,11 +689,11 @@ def parity_assert_tx(builder_or_tx):
         hash2 = hashlib.sha256(canonical_json.encode()).hexdigest()
         tassert(hash1 == hash2, "Hash inconsistency")
 
-        print(f"✅ Parity verified (hash: {hash1[:12]}...)")
+        print(f"[OK] Parity verified (hash: {hash1[:12]}...)")
         return builder_or_tx.to_body() if hasattr(builder_or_tx, 'to_body') else builder_or_tx
 
     except Exception as e:
-        print(f"⚠️  Parity check failed: {e}")
+        print(f"[WARN]  Parity check failed: {e}")
         return builder_or_tx
 
 

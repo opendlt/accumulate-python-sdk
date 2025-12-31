@@ -28,7 +28,7 @@ except ImportError:
 def make_rpc_request(endpoint: str, method: str, params: Any = None) -> Optional[Dict[str, Any]]:
     """Make JSON-RPC request to endpoint."""
     if not urllib:
-        print("❌ urllib not available for HTTP requests")
+        print("[FAIL] urllib not available for HTTP requests")
         return None
 
     payload = {
@@ -58,13 +58,13 @@ def make_rpc_request(endpoint: str, method: str, params: Any = None) -> Optional
             return result
 
     except urllib.error.URLError as e:
-        print(f"❌ Network error: {e}")
+        print(f"[FAIL] Network error: {e}")
         return None
     except json.JSONDecodeError as e:
-        print(f"❌ JSON decode error: {e}")
+        print(f"[FAIL] JSON decode error: {e}")
         return None
     except Exception as e:
-        print(f"❌ Request failed: {e}")
+        print(f"[FAIL] Request failed: {e}")
         return None
 
 

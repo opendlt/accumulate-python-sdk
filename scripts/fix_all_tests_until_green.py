@@ -155,7 +155,7 @@ def main():
 
         # Check if we're green
         if errors == 0 and failed == 0 and coverage is not None and coverage >= 85:
-            print("\n✅ ALL GREEN! Tests passing with adequate coverage.")
+            print("\n[OK] ALL GREEN! Tests passing with adequate coverage.")
             break
 
         # Apply repairs
@@ -179,7 +179,7 @@ def main():
     print("=" * 60)
 
     if errors == 0 and failed == 0 and coverage is not None and coverage >= 85:
-        print(f"✅ SUCCESS: {passed} tests passing, {coverage:.1f}% coverage")
+        print(f"[OK] SUCCESS: {passed} tests passing, {coverage:.1f}% coverage")
 
         # Run additional validations
         print("\n[Additional Validations]")
@@ -194,9 +194,9 @@ def main():
                     timeout=30,
                     check=True
                 )
-                print("  ✅ RPC methods documented")
+                print("  [OK] RPC methods documented")
             except Exception as e:
-                print(f"  ❌ RPC discovery failed: {e}")
+                print(f"  [FAIL] RPC discovery failed: {e}")
 
         # Run examples
         print("\nRunning examples against devnet...")
@@ -212,13 +212,13 @@ def main():
             if script_path.exists():
                 print(f"  {script_name}...", end="")
                 if run_example(script_path, args, mock=False):
-                    print(" ✅")
+                    print(" [OK]")
                 else:
                     # Retry with mock
                     if run_example(script_path, args, mock=True):
-                        print(" ✅ (mock)")
+                        print(" [OK] (mock)")
                     else:
-                        print(" ❌")
+                        print(" [FAIL]")
 
         # Report locations
         print("\n[Reports]")
@@ -231,7 +231,7 @@ def main():
 
         return 0
     else:
-        print(f"❌ FAILURE after {iteration} iterations")
+        print(f"[FAIL] FAILURE after {iteration} iterations")
         print(f"  Tests: {passed} passed, {failed} failed, {errors} errors")
         if coverage is not None:
             print(f"  Coverage: {coverage:.1f}%")

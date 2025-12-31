@@ -554,11 +554,11 @@ class ParitySuite:
             if result.python_success and (not self.args.use_go or result.go_success):
                 if not self.args.use_go or (result.json_match is not False and result.hash_match is not False):
                     passed += 1
-                    print(f"  ✅ PASS")
+                    print(f"  [OK] PASS")
                 else:
-                    print(f"  ❌ FAIL - Encoding mismatch")
+                    print(f"  [FAIL] FAIL - Encoding mismatch")
             else:
-                print(f"  ❌ FAIL - {result.error_message}")
+                print(f"  [FAIL] FAIL - {result.error_message}")
 
         # Generate reports
         coverage_summary = self.get_coverage_summary()
@@ -611,7 +611,7 @@ class ParitySuite:
                 f.write(f"Generated: {summary.timestamp}\n")
                 f.write(f"{coverage_summary}\n")
                 if summary.coverage_percentage:
-                    gate_status = "✅ PASS" if summary.coverage_percentage >= 85 else "❌ FAIL"
+                    gate_status = "[OK] PASS" if summary.coverage_percentage >= 85 else "[FAIL] FAIL"
                     f.write(f"Quality Gate (≥85%): {gate_status}\n")
 
         print(f"\nReports written to {out_dir}/")
@@ -631,7 +631,7 @@ class ParitySuite:
 """
 
         if summary.coverage_percentage:
-            gate_status = "✅ PASS" if summary.coverage_percentage >= 85 else "❌ FAIL"
+            gate_status = "[OK] PASS" if summary.coverage_percentage >= 85 else "[FAIL] FAIL"
             md += f"- **Test Coverage:** {summary.coverage_percentage}% ({gate_status})\n"
 
         md += "\n## Component Counts\n\n"
@@ -642,7 +642,7 @@ class ParitySuite:
 
         for component, expected in expected_counts.items():
             actual = summary.component_counts.get(component, 0)
-            status = "✅" if actual >= expected else "⚠️"
+            status = "[OK]" if actual >= expected else "[WARN]"
             md += f"| {component.title()} | {expected} | {actual} | {status} |\n"
 
         md += "\n## Test Results\n\n"
@@ -650,25 +650,25 @@ class ParitySuite:
         md += "|--------|------|--------|----|-----------|-----------|---------|\n"
 
         for result in summary.results:
-            py_status = "✅" if result.python_success else "❌"
-            go_status = "✅" if result.go_success else "❌" if summary.go_available else "N/A"
+            py_status = "[OK]" if result.python_success else "[FAIL]"
+            go_status = "[OK]" if result.go_success else "[FAIL]" if summary.go_available else "N/A"
 
             json_status = "N/A"
             if result.json_match is True:
-                json_status = "✅"
+                json_status = "[OK]"
             elif result.json_match is False:
-                json_status = "❌"
+                json_status = "[FAIL]"
 
             hash_status = "N/A"
             if result.hash_match is True:
-                hash_status = "✅"
+                hash_status = "[OK]"
             elif result.hash_match is False:
-                hash_status = "❌"
+                hash_status = "[FAIL]"
 
-            overall_status = "✅" if (result.python_success and
+            overall_status = "[OK]" if (result.python_success and
                                    (not summary.go_available or result.go_success) and
                                    result.json_match is not False and
-                                   result.hash_match is not False) else "❌"
+                                   result.hash_match is not False) else "[FAIL]"
 
             md += f"| {result.vector_name} | {result.vector_type} | {py_status} | {go_status} | {json_status} | {hash_status} | {overall_status} |\n"
 
