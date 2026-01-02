@@ -3,7 +3,7 @@ requires = ["setuptools>=68", "wheel", "build"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "accumulate-client"
+name = "accumulate-sdk-opendlt"
 dynamic = ["version", "readme"]
 description = "Accumulate Python SDK (V2/V3 unified) with DevNet-first flows"
 requires-python = ">=3.9"
@@ -48,9 +48,9 @@ secp256k1 = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/opendlt/accumulate-python"
-Documentation = "https://github.com/opendlt/accumulate-python#readme"
-Issues = "https://github.com/opendlt/accumulate-python/issues"
+Homepage = "https://github.com/opendlt/accumulate-python-sdk"
+Documentation = "https://github.com/opendlt/accumulate-python-sdk#readme"
+Issues = "https://github.com/opendlt/accumulate-python-sdk/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
