@@ -58,3 +58,6 @@ tests/fuzz/_stats.json
 # Backup files
 *_backup*.py
 *_old*.py
+
+# pip / build scratch directories (version-prefixed)
+=*/

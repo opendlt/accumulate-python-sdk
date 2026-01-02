@@ -1,6 +1,0 @@
-Defaulting to user installation because normal site-packages is not writeable
-Collecting secp256k1
-  Downloading secp256k1-0.14.0.tar.gz (2.4 MB)
-     ---------------------------------------- 2.4/2.4 MB 4.0 MB/s  0:00:00
-  Preparing metadata (setup.py): started
-  Preparing metadata (setup.py): finished with status 'error'
