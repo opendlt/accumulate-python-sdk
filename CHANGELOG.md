@@ -5,6 +5,13 @@ All notable changes to the opendlt-accumulate Python SDK will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.2] - 2026-02-07
+
+### Fixed
+- Fixed and verified all v3 examples against Kermit public testnet
+- Removed duplicate custom tokens example
+- Updated all examples to use Kermit testnet endpoints
+
 ## [2.0.0] - 2025-12-31
 
 ### Added
