@@ -43,6 +43,527 @@ if TYPE_CHECKING:
 
 
 # =============================================================================
+# Binary Encoding Helpers for Accumulate Protocol
+# =============================================================================
+# These implement the exact binary field encoding used by Go's MarshalBinary()
+# for computing transaction hashes and signing preimages.
+# Reference: Go protocol/types_gen.go, protocol/signature.go
+
+def _sha256(data: bytes) -> bytes:
+    """SHA-256 hash."""
+    return hashlib.sha256(data).digest()
+
+
+def _encode_uvarint(val: int) -> bytes:
+    """Encode unsigned varint (ULEB128)."""
+    result = bytearray()
+    x = val & 0xFFFFFFFFFFFFFFFF
+    while x >= 0x80:
+        result.append((x & 0x7F) | 0x80)
+        x >>= 7
+    result.append(x)
+    return bytes(result)
+
+
+def _field(field_num: int, val: bytes) -> bytes:
+    """Encode a field: uvarint(field_number) + raw_bytes(value)."""
+    return _encode_uvarint(field_num) + val
+
+
+def _field_uvarint(field_num: int, val: int) -> bytes:
+    """Encode a uvarint field."""
+    return _field(field_num, _encode_uvarint(val))
+
+
+def _field_bytes(field_num: int, val: bytes) -> bytes:
+    """Encode a bytes field (length-prefixed)."""
+    return _field(field_num, _encode_uvarint(len(val)) + val)
+
+
+def _field_string(field_num: int, val: str) -> bytes:
+    """Encode a string field (length-prefixed UTF-8)."""
+    encoded = val.encode("utf-8")
+    return _field(field_num, _encode_uvarint(len(encoded)) + encoded)
+
+
+def _field_hash(field_num: int, val: bytes) -> bytes:
+    """Encode a 32-byte hash field (no length prefix)."""
+    assert len(val) == 32, f"Hash must be 32 bytes, got {len(val)}"
+    return _field(field_num, val)
+
+
+def _field_bigint(field_num: int, val: int) -> bytes:
+    """Encode a BigInt field (big-endian bytes, length-prefixed)."""
+    if val == 0:
+        return _field_bytes(field_num, b'\x00')
+    s = hex(val)[2:]
+    if len(s) % 2 == 1:
+        s = "0" + s
+    bigint_bytes = bytes.fromhex(s)
+    return _field_bytes(field_num, bigint_bytes)
+
+
+def _combine_hashes(a: bytes, b: bytes) -> bytes:
+    """Combine two hashes: SHA256(a + b). Matches Go's combineHashes."""
+    return _sha256(a + b)
+
+
+def _merkle_hash(hashes: list) -> bytes:
+    """
+    Compute Merkle DAG root from a list of 32-byte hashes.
+
+    Matches Go's merkle.State.AddEntry + Anchor pattern.
+    Uses binary carry addition for incremental tree construction.
+    """
+    if not hashes:
+        return b'\x00' * 32
+
+    pending = []
+    count = 0
+
+    for h in hashes:
+        count += 1
+        # Pad pending if needed
+        while len(pending) < count.bit_length():
+            pending.append(None)
+
+        current = h
+        for i in range(len(pending)):
+            if pending[i] is None:
+                pending[i] = current
+                break
+            current = _combine_hashes(pending[i], current)
+            pending[i] = None
+        else:
+            pending.append(current)
+
+    # Compute anchor
+    anchor = None
+    for v in pending:
+        if anchor is None:
+            if v is not None:
+                anchor = v[:]
+        elif v is not None:
+            anchor = _combine_hashes(v, anchor)
+
+    return anchor if anchor else b'\x00' * 32
+
+
+def _data_entry_hash(entry: dict) -> bytes:
+    """
+    Compute the hash of a data entry.
+
+    For DoubleHashDataEntry: double-SHA256 of merkle root of data hashes.
+    For AccumulateDataEntry: merkle root of data hashes (single hash).
+    """
+    data_items = entry.get("data", [])
+    entry_type = entry.get("type", "")
+
+    # Build list of SHA256(data_item) for each data item
+    item_hashes = []
+    for d in data_items:
+        if isinstance(d, str):
+            d = bytes.fromhex(d)
+        item_hashes.append(_sha256(d))
+
+    merkle_root = _merkle_hash(item_hashes)
+
+    if entry_type in ("doubleHash", "doubleHashDataEntry"):
+        # DoubleHashDataEntry: double hash the merkle root
+        return _sha256(merkle_root)
+    else:
+        # AccumulateDataEntry: just the merkle root
+        return merkle_root
+
+
+def _compute_write_data_body_hash(body: dict) -> bytes:
+    """
+    Compute WriteData body hash using the special GetHash() algorithm.
+
+    Instead of SHA256(MarshalBinary(body)), WriteData uses:
+    1. Marshal body WITHOUT the entry field
+    2. Compute entry.Hash() separately
+    3. Return MerkleHash([SHA256(body_without_entry), entry_hash])
+    """
+    # Step 1: Marshal body without entry - just the type field (and scratch/writeToState if set)
+    body_parts = bytearray()
+    body_parts += _field_uvarint(1, 5)  # TransactionType = writeData = 5
+    if body.get("scratch"):
+        body_parts += _field_uvarint(3, 1)
+    if body.get("writeToState"):
+        body_parts += _field_uvarint(4, 1)
+    body_without_entry = bytes(body_parts)
+
+    # Step 2: Compute entry hash
+    entry = body.get("entry", {})
+    entry_hash = _data_entry_hash(entry)
+
+    # Step 3: Merkle hash of [SHA256(body_without_entry), entry_hash]
+    h1 = _sha256(body_without_entry)
+    return _merkle_hash([h1, entry_hash])
+
+
+def _encode_ed25519_sig_metadata(
+    public_key: bytes,
+    signer_url: str,
+    signer_version: int,
+    timestamp: int
+) -> bytes:
+    """
+    Binary-encode ED25519 signature metadata for initiator/preimage computation.
+
+    Go struct field order (protocol/types_gen.go):
+      Field 1: Type (SignatureType)
+      Field 2: PublicKey (bytes)
+      Field 3: Signature (bytes) - SKIPPED in metadata
+      Field 4: Signer (URL)
+      Field 5: SignerVersion (uint64)
+      Field 6: Timestamp (uint64)
+      Field 7: Vote (VoteType) - 0=Accept, skipped when default
+    """
+    parts = bytearray()
+
+    # Field 1: Type = ED25519 (SignatureType.ED25519 = 2)
+    parts += _field_uvarint(1, 2)
+
+    # Field 2: PublicKey
+    parts += _field_bytes(2, public_key)
+
+    # Field 3: Signature - SKIPPED in metadata
+
+    # Field 4: Signer URL
+    parts += _field_string(4, signer_url)
+
+    # Field 5: SignerVersion (skip if 0)
+    if signer_version != 0:
+        parts += _field_uvarint(5, signer_version)
+
+    # Field 6: Timestamp (skip if 0)
+    if timestamp != 0:
+        parts += _field_uvarint(6, timestamp)
+
+    # Field 7: Vote = ACCEPT (0) - skipped as zero value
+
+    return bytes(parts)
+
+
+def _encode_tx_header(
+    principal: str,
+    initiator: bytes,
+    memo: Optional[str] = None,
+    metadata: Optional[bytes] = None
+) -> bytes:
+    """
+    Binary-encode transaction header.
+
+    Go struct field order (protocol/types_gen.go):
+      Field 1: Principal (URL)
+      Field 2: Initiator (Hash, 32 bytes)
+      Field 3: Memo (string, optional)
+      Field 4: Metadata (bytes, optional)
+      Field 5: Expire (optional)
+      Field 6: HoldUntil (optional)
+      Field 7: Authorities (optional)
+    """
+    parts = bytearray()
+
+    # Field 1: Principal URL
+    parts += _field_string(1, principal)
+
+    # Field 2: Initiator hash (32 bytes)
+    if initiator and initiator != b'\x00' * 32:
+        parts += _field_hash(2, initiator)
+
+    # Field 3: Memo (optional)
+    if memo:
+        parts += _field_string(3, memo)
+
+    # Field 4: Metadata (optional)
+    if metadata:
+        parts += _field_bytes(4, metadata)
+
+    # Fields 5-7: Expire, HoldUntil, Authorities - not implemented for basic use
+
+    return bytes(parts)
+
+
+def _encode_tx_body(body: Dict[str, Any]) -> bytes:
+    """
+    Binary-encode transaction body based on type.
+
+    Each body type encodes: Field 1 = TransactionType (uint), then type-specific fields.
+    """
+    body_type = body.get("type", "")
+    parts = bytearray()
+
+    _TX_TYPE_MAP = {
+        "createIdentity": 1, "createTokenAccount": 2, "sendTokens": 3,
+        "createDataAccount": 4, "writeData": 5, "writeDataTo": 6,
+        "acmeFaucet": 7, "createToken": 8, "issueTokens": 9,
+        "burnTokens": 10, "createLiteTokenAccount": 11,
+        "createKeyPage": 12, "createKeyBook": 13, "addCredits": 14,
+        "updateKeyPage": 15, "lockAccount": 16, "burnCredits": 17,
+        "transferCredits": 18, "updateAccountAuth": 21, "updateKey": 22,
+    }
+
+    tx_type_val = _TX_TYPE_MAP.get(body_type, 0)
+
+    # Field 1: TransactionType
+    parts += _field_uvarint(1, tx_type_val)
+
+    if body_type == "addCredits":
+        if body.get("recipient"):
+            parts += _field_string(2, body["recipient"])
+        amount = int(body.get("amount", 0))
+        if amount > 0:
+            parts += _field_bigint(3, amount)
+        oracle = body.get("oracle", 0)
+        if oracle:
+            parts += _field_uvarint(4, oracle)
+
+    elif body_type == "sendTokens":
+        # Go field order: Type(1), Hash(2), Meta(3), To(4)
+        for recipient in body.get("to", []):
+            r_parts = bytearray()
+            if recipient.get("url"):
+                r_parts += _field_string(1, recipient["url"])
+            amt = int(recipient.get("amount", 0))
+            if amt > 0:
+                r_parts += _field_bigint(2, amt)
+            parts += _field_bytes(4, bytes(r_parts))
+
+    elif body_type == "createIdentity":
+        # Go field order: Type(1), Url(2), KeyHash(3, WriteBytes), KeyBookUrl(4), Authorities(6)
+        if body.get("url"):
+            parts += _field_string(2, body["url"])
+        if body.get("keyHash"):
+            kh = body["keyHash"]
+            if isinstance(kh, str):
+                kh = bytes.fromhex(kh)
+            parts += _field_bytes(3, kh)  # WriteBytes, not WriteHash
+        if body.get("keyBookUrl"):
+            parts += _field_string(4, body["keyBookUrl"])
+
+    elif body_type == "createTokenAccount":
+        if body.get("url"):
+            parts += _field_string(2, body["url"])
+        if body.get("tokenUrl"):
+            parts += _field_string(3, body["tokenUrl"])
+
+    elif body_type == "createDataAccount":
+        if body.get("url"):
+            parts += _field_string(2, body["url"])
+
+    elif body_type == "writeData":
+        entry = body.get("entry", {})
+        entry_bytes = _encode_data_entry(entry)
+        if entry_bytes:
+            parts += _field_bytes(2, entry_bytes)
+        if body.get("scratch"):
+            parts += _field_uvarint(3, 1)
+
+    elif body_type == "createToken":
+        # Go field order: Type(1), Url(2), Symbol(4), Precision(5), Properties(6), SupplyLimit(7)
+        if body.get("url"):
+            parts += _field_string(2, body["url"])
+        if body.get("symbol"):
+            parts += _field_string(4, body["symbol"])
+        if body.get("precision") is not None:
+            parts += _field_uvarint(5, body["precision"])
+        if body.get("supplyLimit") is not None:
+            parts += _field_bigint(7, body["supplyLimit"])
+
+    elif body_type == "issueTokens":
+        # Go field order: Type(1), Recipient(2), Amount(3), To(4)
+        for recipient in body.get("to", []):
+            r_parts = bytearray()
+            if recipient.get("url"):
+                r_parts += _field_string(1, recipient["url"])
+            amt = int(recipient.get("amount", 0))
+            if amt > 0:
+                r_parts += _field_bigint(2, amt)
+            parts += _field_bytes(4, bytes(r_parts))
+
+    elif body_type == "burnTokens":
+        amount = int(body.get("amount", 0))
+        if amount > 0:
+            parts += _field_bigint(2, amount)
+
+    elif body_type == "createKeyPage":
+        # Go uses KeySpec: PublicKeyHash(1, WriteBytes), LastUsedOn(2), Delegate(3, WriteUrl)
+        for key_spec in body.get("keys", []):
+            ks_parts = bytearray()
+            if key_spec.get("keyHash"):
+                kh = key_spec["keyHash"]
+                if isinstance(kh, str):
+                    kh = bytes.fromhex(kh)
+                ks_parts += _field_bytes(1, kh)  # WriteBytes, not WriteHash
+            if key_spec.get("delegate"):
+                ks_parts += _field_string(3, key_spec["delegate"])  # KeySpec delegate=field 3
+            parts += _field_bytes(2, bytes(ks_parts))
+
+    elif body_type == "createKeyBook":
+        # Go field order: Type(1), Url(2), PublicKeyHash(3, WriteBytes), Authorities(5)
+        if body.get("url"):
+            parts += _field_string(2, body["url"])
+        if body.get("publicKeyHash"):
+            pkh = body["publicKeyHash"]
+            if isinstance(pkh, str):
+                pkh = bytes.fromhex(pkh)
+            parts += _field_bytes(3, pkh)  # WriteBytes, not WriteHash
+
+    elif body_type == "updateKeyPage":
+        for op in body.get("operation", []):
+            op_bytes = _encode_key_page_operation(op)
+            if op_bytes:
+                parts += _field_bytes(2, op_bytes)
+
+    return bytes(parts)
+
+
+def _encode_data_entry(entry: Dict[str, Any]) -> bytes:
+    """Encode a data entry for WriteData body."""
+    entry_type = entry.get("type", "")
+    parts = bytearray()
+
+    _ENTRY_TYPE_MAP = {"accumulate": 2, "dataEntry": 2, "doubleHash": 3, "doubleHashDataEntry": 3}
+    type_val = _ENTRY_TYPE_MAP.get(entry_type, 0)
+
+    if type_val:
+        parts += _field_uvarint(1, type_val)
+
+    for d in entry.get("data", []):
+        if isinstance(d, str):
+            d = bytes.fromhex(d)
+        parts += _field_bytes(2, d)
+
+    return bytes(parts)
+
+
+def _encode_key_page_operation(op: Dict[str, Any]) -> bytes:
+    """Encode a key page operation."""
+    op_type = op.get("type", "")
+    parts = bytearray()
+
+    _OP_TYPE_MAP = {"update": 1, "remove": 2, "add": 3, "setThreshold": 4}
+    type_val = _OP_TYPE_MAP.get(op_type, 0)
+    parts += _field_uvarint(1, type_val)
+
+    if op_type in ("add", "remove", "update"):
+        # KeySpecParams: KeyHash(1, WriteBytes), Delegate(2, WriteUrl)
+        entry = op.get("entry", {})
+        e_parts = bytearray()
+        if entry.get("keyHash"):
+            kh = entry["keyHash"]
+            if isinstance(kh, str):
+                kh = bytes.fromhex(kh)
+            e_parts += _field_bytes(1, kh)  # WriteBytes, not WriteHash
+        if entry.get("delegate"):
+            e_parts += _field_string(2, entry["delegate"])
+        parts += _field_bytes(2, bytes(e_parts))
+
+    elif op_type == "setThreshold":
+        parts += _field_uvarint(2, op.get("threshold", 1))
+
+    return bytes(parts)
+
+
+def _compute_tx_hash_and_sign(
+    keypair: Any,
+    principal: str,
+    body: Dict[str, Any],
+    signer_url: str,
+    signer_version: int,
+    memo: Optional[str] = None,
+    timestamp: Optional[int] = None
+) -> Tuple[Dict[str, Any], int]:
+    """
+    Compute transaction hash and sign using proper binary encoding.
+
+    Returns:
+        Tuple of (envelope_dict, timestamp_used)
+    """
+    # Get public key
+    if hasattr(keypair, 'public_key_bytes'):
+        public_key_bytes = keypair.public_key_bytes()
+    elif hasattr(keypair, 'public_key'):
+        pk = keypair.public_key
+        public_key_bytes = pk().to_bytes() if callable(pk) else pk.to_bytes()
+    else:
+        raise ValueError("Keypair must have public_key or public_key_bytes")
+
+    if timestamp is None:
+        timestamp = int(time.time() * 1_000_000)  # microseconds
+
+    # Step 1: Binary-encode signature metadata
+    sig_metadata_binary = _encode_ed25519_sig_metadata(
+        public_key=public_key_bytes,
+        signer_url=signer_url,
+        signer_version=signer_version,
+        timestamp=timestamp
+    )
+
+    # Step 2: Compute initiator = SHA256(sig_metadata_binary)
+    initiator = _sha256(sig_metadata_binary)
+
+    # Step 3: Binary-encode transaction header (NO timestamp - only in signature)
+    header_binary = _encode_tx_header(
+        principal=principal,
+        initiator=initiator,
+        memo=memo
+    )
+
+    # Step 4: Binary-encode transaction body
+    body_binary = _encode_tx_body(body)
+
+    # Step 5: Compute tx_hash = SHA256(SHA256(header) + body_hash)
+    # WriteData/WriteDataTo use a special body hash (Merkle of body-without-entry + entry hash)
+    header_hash = _sha256(header_binary)
+    body_type = body.get("type", "")
+    if body_type in ("writeData", "writeDataTo"):
+        body_hash = _compute_write_data_body_hash(body)
+    else:
+        body_hash = _sha256(body_binary)
+    tx_hash = _sha256(header_hash + body_hash)
+
+    # Step 6: Compute signing preimage = SHA256(initiator + tx_hash)
+    signing_preimage = _sha256(initiator + tx_hash)
+
+    # Step 7: Sign the preimage
+    if hasattr(keypair, 'sign'):
+        signature = keypair.sign(signing_preimage)
+    elif hasattr(keypair, 'private_key'):
+        signature = keypair.private_key.sign(signing_preimage)
+    else:
+        raise ValueError("Keypair must have sign method or private_key")
+
+    # Step 8: Build envelope
+    transaction = {
+        "header": {
+            "principal": principal,
+            "initiator": initiator.hex()
+        },
+        "body": body
+    }
+    if memo:
+        transaction["header"]["memo"] = memo
+
+    envelope = {
+        "transaction": transaction,
+        "signatures": [{
+            "type": "ed25519",
+            "publicKey": public_key_bytes.hex(),
+            "signature": signature.hex(),
+            "signer": signer_url,
+            "signerVersion": signer_version,
+            "timestamp": timestamp
+        }]
+    }
+
+    return envelope, timestamp
+
+
+# =============================================================================
 # Data Classes
 # =============================================================================
 
@@ -356,6 +877,13 @@ class SmartSigner:
         """
         Sign a transaction and build the envelope.
 
+        Uses proper binary encoding matching the Go protocol implementation:
+        1. Binary-encode signature metadata → compute initiator hash
+        2. Binary-encode transaction header (with initiator) and body
+        3. Compute tx_hash = SHA256(SHA256(header_binary) + SHA256(body_binary))
+        4. Compute signing preimage = SHA256(initiator + tx_hash)
+        5. Sign the preimage
+
         Args:
             principal: Transaction principal URL
             body: Transaction body
@@ -365,72 +893,18 @@ class SmartSigner:
         Returns:
             Complete transaction envelope ready for submission
         """
-        from .crypto.ed25519 import Ed25519PrivateKey
-        from .tx.context import BuildContext
-
         # Get signer version
         if signer_version is None:
             signer_version = self.get_signer_version()
 
-        # Get public key and hash
-        if hasattr(self.keypair, 'public_key_bytes'):
-            # Ed25519KeyPair has public_key_bytes() method
-            public_key_bytes = self.keypair.public_key_bytes()
-        elif hasattr(self.keypair, 'public_key'):
-            # Check if public_key is callable (method) or attribute
-            pk = self.keypair.public_key
-            if callable(pk):
-                # Ed25519PrivateKey has public_key() method
-                public_key_bytes = pk().to_bytes()
-            else:
-                # Ed25519KeyPair has public_key attribute
-                public_key_bytes = pk.to_bytes()
-        else:
-            raise ValueError("Keypair must have public_key or public_key_bytes")
-
-        public_key_hash = hashlib.sha256(public_key_bytes).digest()
-
-        # Build context
-        timestamp = int(time.time() * 1_000_000)  # microseconds
-
-        # Build transaction
-        transaction = {
-            "header": {
-                "principal": principal,
-                "initiator": public_key_hash.hex(),
-                "timestamp": timestamp
-            },
-            "body": body
-        }
-
-        if memo:
-            transaction["header"]["memo"] = memo
-
-        # Compute transaction hash using canonical JSON
-        from .canonjson import dumps_canonical
-        tx_bytes = dumps_canonical(transaction).encode('utf-8')
-        tx_hash = hashlib.sha256(tx_bytes).digest()
-
-        # Sign
-        if hasattr(self.keypair, 'sign'):
-            signature = self.keypair.sign(tx_hash)
-        elif hasattr(self.keypair, 'private_key'):
-            signature = self.keypair.private_key.sign(tx_hash)
-        else:
-            raise ValueError("Keypair must have sign method or private_key")
-
-        # Build envelope (V3 format)
-        envelope = {
-            "transaction": transaction,
-            "signatures": [{
-                "type": "ed25519",
-                "publicKey": public_key_bytes.hex(),
-                "signature": signature.hex(),
-                "signer": self.signer_url,
-                "signerVersion": signer_version,
-                "timestamp": timestamp
-            }]
-        }
+        envelope, _ = _compute_tx_hash_and_sign(
+            keypair=self.keypair,
+            principal=principal,
+            body=body,
+            signer_url=self.signer_url,
+            signer_version=signer_version,
+            memo=memo
+        )
 
         return envelope
 
@@ -440,7 +914,8 @@ class SmartSigner:
         body: Dict[str, Any],
         memo: Optional[str] = None,
         max_attempts: int = 30,
-        poll_interval: float = 2.0
+        poll_interval: float = 2.0,
+        verbose: bool = False
     ) -> SubmitResult:
         """
         Sign, submit, and wait for transaction completion.
@@ -451,6 +926,7 @@ class SmartSigner:
             memo: Optional memo
             max_attempts: Maximum poll attempts
             poll_interval: Seconds between polls
+            verbose: If True, print full RPC responses for debugging
 
         Returns:
             SubmitResult with success status and transaction ID
@@ -459,15 +935,52 @@ class SmartSigner:
             # Build and sign envelope
             envelope = self.sign_and_build(principal, body, memo)
 
-            # Submit
-            response = self.client.submit(envelope)
+            if verbose:
+                import json
+                print(f"\n[VERBOSE] Envelope being submitted:")
+                print(json.dumps(envelope, indent=2, default=str))
 
-            # Extract transaction ID
+            # Submit
+            try:
+                response = self.client.submit(envelope)
+            except Exception as submit_error:
+                if verbose:
+                    import json
+                    print(f"\n[VERBOSE] Submit FAILED with exception:")
+                    print(f"  Error type: {type(submit_error).__name__}")
+                    print(f"  Error message: {submit_error}")
+                    if hasattr(submit_error, 'code'):
+                        print(f"  Error code: {submit_error.code}")
+                    if hasattr(submit_error, 'data'):
+                        print(f"  Error data: {submit_error.data}")
+                raise
+
+            if verbose:
+                import json
+                print(f"\n[VERBOSE] Submit response:")
+                print(json.dumps(response, indent=2, default=str))
+
+            # Extract transaction ID and check for errors
             txid = None
             if isinstance(response, list) and response:
                 first_result = response[0]
                 if isinstance(first_result, dict) and first_result.get("status"):
                     txid = first_result["status"].get("txID")
+                    # Check ALL results for errors
+                    for res_item in response:
+                        if isinstance(res_item, dict):
+                            status = res_item.get("status", {})
+                            msg = res_item.get("message", "")
+                            if status.get("failed") or status.get("error") or "invalid signature" in msg.lower():
+                                error_msg = status.get("error", {}).get("message", msg) if isinstance(status.get("error"), dict) else msg
+                                if verbose:
+                                    print(f"\n[VERBOSE] Transaction error: {error_msg}")
+                                return SubmitResult(
+                                    success=False,
+                                    txid=txid,
+                                    error=f"Transaction error: {error_msg}",
+                                    response=response
+                                )
 
             if not txid:
                 return SubmitResult(
@@ -480,14 +993,38 @@ class SmartSigner:
             for attempt in range(max_attempts):
                 try:
                     tx_result = self.client.query(txid)
-                    if tx_result.get("status", {}).get("delivered", False):
+                    if verbose and attempt == 0:
+                        import json
+                        print(f"\n[VERBOSE] First query result for {txid}:")
+                        print(json.dumps(tx_result, indent=2, default=str))
+
+                    # Handle non-dict responses (sometimes API returns a string)
+                    if not isinstance(tx_result, dict):
+                        if verbose and attempt < 3:
+                            print(f"\n[VERBOSE] Query returned non-dict (attempt {attempt+1}): {type(tx_result).__name__}")
+                        time.sleep(poll_interval)
+                        continue
+
+                    status = tx_result.get("status", {})
+                    if isinstance(status, dict) and status.get("delivered", False):
+                        # Check for execution error
+                        if status.get("error"):
+                            if verbose:
+                                print(f"\n[VERBOSE] Delivered with error: {status.get('error')}")
+                            return SubmitResult(
+                                success=False,
+                                txid=txid,
+                                error=f"Transaction failed: {status.get('error')}",
+                                response=tx_result
+                            )
                         return SubmitResult(
                             success=True,
                             txid=txid,
                             response=tx_result
                         )
-                except Exception:
-                    pass
+                except Exception as e:
+                    if verbose and attempt < 3:
+                        print(f"\n[VERBOSE] Query error (attempt {attempt+1}): {e}")
 
                 time.sleep(poll_interval)
 
@@ -499,6 +1036,10 @@ class SmartSigner:
             )
 
         except Exception as e:
+            if verbose:
+                import traceback
+                print(f"\n[VERBOSE] Exception: {e}")
+                traceback.print_exc()
             return SubmitResult(
                 success=False,
                 error=str(e)

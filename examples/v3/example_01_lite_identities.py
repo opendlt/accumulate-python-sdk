@@ -101,6 +101,7 @@ def test_lite_identities():
         print(f"Buying {credits} credits for {amount} ACME sub-units")
 
         # Use SmartSigner to sign and submit - no manual version tracking!
+        # Set verbose=True to see full RPC request/response for debugging
         add_credits_result = signer1.sign_submit_and_wait(
             principal=lta1,
             body=TxBody.add_credits(lid1, str(amount), oracle),
@@ -113,6 +114,7 @@ def test_lite_identities():
             tx_ids.append(("AddCredits (lite identity)", add_credits_result.txid))
         else:
             print(f"AddCredits FAILED: {add_credits_result.error}")
+            print(f"Full response: {add_credits_result.response}")
             print("Continuing anyway to demonstrate API...")
 
         # Verify credits were added
@@ -144,6 +146,7 @@ def test_lite_identities():
             tx_ids.append(("SendTokens", send_result.txid))
         else:
             print(f"SendTokens FAILED: {send_result.error}")
+            print(f"Full response: {send_result.response}")
 
         # Check recipient balance
         time.sleep(5)
