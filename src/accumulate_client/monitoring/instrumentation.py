@@ -8,7 +8,6 @@ functions, and system resources with automatic metrics.
 import asyncio
 import functools
 import logging
-import psutil
 import time
 from typing import Any, Callable, Dict, Optional, Union
 
@@ -258,6 +257,12 @@ def collect_system_metrics(prefix: str = "system") -> Dict[str, Any]:
         Dictionary of collected metrics
     """
     registry = get_registry()
+
+    try:
+        import psutil
+    except ImportError:
+        logger.warning("psutil not installed – install with: pip install psutil")
+        return {"error": "psutil not installed", "timestamp": time.time()}
 
     try:
         # CPU metrics
