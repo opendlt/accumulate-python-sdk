@@ -131,7 +131,7 @@ from .convenience import (
 # Compatibility imports for tests
 from .compat import Ed25519KeyPair, TransactionCodec, dumps_canonical, sha256_bytes, sha256_hex
 
-__version__ = "2.3.0"
+__version__ = "2.0.3"
 __all__ = [
     # Primary entry point (Phase 7)
     "Accumulate",

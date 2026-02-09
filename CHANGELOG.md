@@ -5,6 +5,19 @@ All notable changes to the opendlt-accumulate Python SDK will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.3] - 2026-02-09
+
+### Fixed
+- Fixed psutil import crash for pip users (lazy import for optional dependency)
+- Fixed all README.md files (correct pip package name, imports, method names)
+- Fixed version mismatch between _version.py and __init__.py
+
+### Changed
+- Consolidated tool/, tools/, scripts/ into tooling/
+- Moved internal/debug examples out of examples/ into tooling/internal-examples/
+- Removed stale unified/unified/ directory and site/ duplicate
+- Removed .coverage and .env.local from repo tracking
+
 ## [2.0.2] - 2026-02-07
 
 ### Fixed
