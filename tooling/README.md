@@ -247,7 +247,7 @@ cd tooling/ts-fixture-exporter/
 TS_FUZZ_N=1000 node export-random-vectors.js > ../../tests/golden/ts_rand_vectors.jsonl
 
 # 2. Run parity tests
-python scripts/run_parity_suite.py --audit-root "C:\Accumulate_Stuff\py_parity_audit"
+python tooling/scripts/run_parity_suite.py --audit-root "C:\Accumulate_Stuff\py_parity_audit"
 
 # 3. Validate compatibility
 python tooling/validators/validate_compatibility.py
@@ -386,7 +386,7 @@ The tooling is integrated into the SDK build process:
 # CI workflow integration
 python tooling/validators/validate_all.py
 python tooling/codegen/generate_all.py
-python scripts/green_gate.py
+python tooling/scripts/green_gate.py
 ```
 
 This ensures that all generated code is up-to-date and validated before SDK release.

@@ -6,7 +6,7 @@ Generates unified/docs/ and unified/site/ by introspecting public modules
 without external dependencies.
 
 Usage:
-    python scripts/make_docs.py
+    python tooling/scripts/make_docs.py
 """
 
 import os

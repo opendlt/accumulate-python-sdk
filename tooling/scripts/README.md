@@ -8,7 +8,7 @@ Automation scripts for development, testing, and quality assurance.
 Comprehensive validation orchestrator with automatic repair capabilities.
 
 ```bash
-python scripts/green_gate.py
+python tooling/scripts/green_gate.py
 ```
 
 Runs four validation stages:
@@ -21,7 +21,7 @@ Runs four validation stages:
 SDK health and completeness validation.
 
 ```bash
-python scripts/selfcheck.py
+python tooling/scripts/selfcheck.py
 ```
 
 Validates:
@@ -34,7 +34,7 @@ Validates:
 Cross-language compatibility validation against Go reference.
 
 ```bash
-python scripts/run_parity_suite.py --audit-root "path/to/py_parity_audit"
+python tooling/scripts/run_parity_suite.py --audit-root "path/to/py_parity_audit"
 ```
 
 ## Development Tools
@@ -43,22 +43,22 @@ python scripts/run_parity_suite.py --audit-root "path/to/py_parity_audit"
 Generate API documentation.
 
 ```bash
-python scripts/make_docs.py
+python tooling/scripts/make_docs.py
 ```
 
 ### `gen_golden.py`
 Generate and manage golden test vectors.
 
 ```bash
-python scripts/gen_golden.py
-ACC_UPDATE_GOLDENS=1 python scripts/gen_golden.py  # Force regeneration
+python tooling/scripts/gen_golden.py
+ACC_UPDATE_GOLDENS=1 python tooling/scripts/gen_golden.py  # Force regeneration
 ```
 
 ## Usage Patterns
 
 ### Pre-commit Validation
 ```bash
-python scripts/green_gate.py --skip-examples
+python tooling/scripts/green_gate.py --skip-examples
 ```
 
 ### Quick Test Run
@@ -68,8 +68,8 @@ pytest tests/ -x  # Stop on first failure
 
 ### Release Preparation
 ```bash
-python scripts/green_gate.py
-python scripts/make_docs.py
+python tooling/scripts/green_gate.py
+python tooling/scripts/make_docs.py
 ```
 
 ## Exit Codes

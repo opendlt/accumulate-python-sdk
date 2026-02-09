@@ -8,8 +8,8 @@ fuzz testing. Uses existing proven transactions and systematically varies parame
 to create large test sets while maintaining compatibility.
 
 Usage:
-    python tools/generate_fuzz_vectors.py [count] > tests/golden/fuzz_vectors.jsonl
-    python tools/generate_fuzz_vectors.py 200 > tests/golden/fuzz_vectors.jsonl
+    python tooling/generate_fuzz_vectors.py [count] > tests/golden/fuzz_vectors.jsonl
+    python tooling/generate_fuzz_vectors.py 200 > tests/golden/fuzz_vectors.jsonl
 """
 
 import json

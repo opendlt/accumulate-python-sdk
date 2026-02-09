@@ -5,7 +5,7 @@ Documentation for the Accumulate Python SDK.
 ## Generating Documentation
 
 ```bash
-python scripts/make_docs.py
+python tooling/scripts/make_docs.py
 ```
 
 Opens generated documentation in browser at `site/index.html`.
@@ -24,7 +24,7 @@ docs/
 - **[Main README](../README.md)** - Quick start and installation
 - **[Examples](../examples/README.md)** - Working code examples
 - **[Tests](../tests/README.md)** - Test organization and execution
-- **[Scripts](../scripts/README.md)** - Development scripts
+- **[Scripts](../tooling/scripts/README.md)** - Development scripts
 
 ## API Reference
 

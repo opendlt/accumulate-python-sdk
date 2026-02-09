@@ -11,9 +11,8 @@ src/accumulate_client/
 ├── convenience.py     # TxBody builders and helpers
 ├── enums.py           # Protocol enumerations (14 enums)
 ├── types.py           # Protocol types (103 types)
-├── crypto/            # Key pair implementations
-├── signing/           # SmartSigner and version tracking
-├── signers/           # Signature type classes (17 types)
+├── crypto/            # Key pair implementations (Ed25519, Secp256k1)
+├── signers/           # Signature type classes (Ed25519, RCD1, BTC, ETH)
 ├── tx/                # Transaction builders (33 types)
 ├── runtime/           # URL handling, codecs, validation
 ├── transport/         # HTTP and WebSocket transports
@@ -52,17 +51,17 @@ body = TxBody.write_data(entries_hex=[data_hex])
 from accumulate_client.crypto.ed25519 import Ed25519KeyPair
 
 kp = Ed25519KeyPair.generate()
-lid = kp.lite_identity_url()
-lta = kp.lite_token_account_url()
+lid = kp.derive_lite_identity_url()
+lta = kp.derive_lite_token_account_url("ACME")
 signature = kp.sign(message)
 ```
 
-### Smart Signing (`signing/`)
+### Smart Signing (`convenience.py`)
 
 ```python
-from accumulate_client.signing.smart_signer import SmartSigner
+from accumulate_client.convenience import SmartSigner
 
-signer = SmartSigner(client=client, keypair=kp, signer_url=lid)
+signer = SmartSigner(client=client, keypair=kp, signer_url=f"{lid}/1")
 result = signer.sign_submit_and_wait(principal=lta, body=body)
 ```
 

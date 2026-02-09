@@ -54,7 +54,7 @@ def test_devnet_connectivity(config):
             raise Exception(f"V3 endpoint returned {response.status_code}")
     except Exception as e:
         print(f"[ERROR] DevNet connection failed: {e}")
-        print("Please ensure DevNet is running and run: python tool/devnet_discovery.py")
+        print("Please ensure DevNet is running and run: python tooling/devnet_discovery.py")
         sys.exit(1)
 
 

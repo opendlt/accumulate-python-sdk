@@ -46,14 +46,14 @@ class TestFuzzRoundtripFromDart(unittest.TestCase):
             print(f"Loaded {len(cls.vectors)} random vectors from {vector_path}")
         else:
             print(f"Warning: Random vectors file not found at {vector_path}")
-            print("Run: dart run tool/export_random_vectors.dart > tests/golden/rand_vectors.jsonl")
+            print("Run: dart run tooling/export_random_vectors.dart > tests/golden/rand_vectors.jsonl")
 
     def test_vectors_loaded(self):
         """Test that random vectors were loaded successfully"""
         self.assertGreater(
             len(self.vectors),
             0,
-            f"No fuzz vectors loaded. Please run: python tools/generate_fuzz_vectors.py 200 > {self.vector_path}",
+            f"No fuzz vectors loaded. Please run: python tooling/generate_fuzz_vectors.py 200 > {self.vector_path}",
         )
 
     def test_fuzz_canonical_json_parity(self):

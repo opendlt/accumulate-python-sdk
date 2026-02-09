@@ -124,7 +124,7 @@ if __name__ == "__main__":
         print("DevNet appears to be running, proceeding with integration tests...")
     except Exception as e:
         print(f"DevNet not available: {e}")
-        print("Run tool/devnet_discovery.py first to set up environment")
+        print("Run tooling/devnet_discovery.py first to set up environment")
         print("Integration tests will be skipped")
 
     unittest.main()

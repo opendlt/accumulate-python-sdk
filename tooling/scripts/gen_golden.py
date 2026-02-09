@@ -438,7 +438,7 @@ Golden vectors are used for:
 To regenerate golden vectors:
 
 ```bash
-python scripts/gen_golden.py
+python tooling/scripts/gen_golden.py
 ```
 
 Set `ACC_UPDATE_GOLDENS=1` to force regeneration of all vectors.

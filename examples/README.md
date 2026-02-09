@@ -8,85 +8,51 @@ Complete usage examples for the Accumulate Python SDK. All examples are runnable
 
 | Example | Description |
 |---------|-------------|
-| `example01_lite_identities.py` | Create lite identity and token accounts, faucet integration |
-| `example02_accumulate_identities.py` | Create Accumulate Digital Identifier (ADI) |
-| `example03_adi_token_accounts.py` | ADI token account management |
-| `example04_data_accounts.py` | Data account creation and WriteData operations |
-| `example05_send_acme_adi_to_adi.py` | ADI-to-ADI token transfers |
-| `example06_custom_tokens.py` | Custom token issuer creation |
-| `example07_sub_adi_and_directories.py` | Sub-ADI and directory management |
-| `example08_staking_and_delegation.py` | Staking and delegation operations |
-| `example09_key_management.py` | Key page and key book management |
-| `example10_multisig_transactions.py` | Multi-signature transaction workflows |
-| `example11_authority_management.py` | Authority and governance operations |
-| `example12_quickstart_demo.py` | Complete zero-to-hero workflow |
+| `v3/example_01_lite_identities.py` | Create lite identity and token accounts, faucet integration |
+| `v3/example_02_accumulate_identities.py` | Create Accumulate Digital Identifier (ADI) |
+| `v3/example_03_adi_token_accounts.py` | ADI token account management |
+| `v3/example_04_data_accounts_entries.py` | Data account creation and WriteData operations |
+| `v3/example_05_adi_to_adi_transfer.py` | ADI-to-ADI token transfers |
+| `v3/example_06_custom_tokens.py` | Custom token issuer creation |
+| `v3/example_08_query_tx_signatures.py` | Transaction and signature queries |
+| `v3/example_09_key_management.py` | Key page and key book management |
+| `v3/example_10_update_key_page_threshold.py` | Multi-sig threshold updates |
+| `v3/example_11_multi_signature_types.py` | Ed25519, RCD1, BTC, ETH signatures |
+| `v3/example_12_quickstart_demo.py` | Complete zero-to-hero workflow |
+| `v3/example_13_adi_to_adi_transfer_with_header_options.py` | Memo, metadata, expire, hold_until |
 
 ### Quick Start
 
 ```bash
-# 1. Environment Setup
-python -m venv .venv
-.venv\Scripts\activate  # Windows
-# source .venv/bin/activate  # Linux/Mac
-pip install -e ".[dev]"
+# 1. Install the SDK
+pip install accumulate-sdk-opendlt
 
 # 2. Run any example
-python examples/example01_lite_identities.py
+python examples/v3/example_01_lite_identities.py
 ```
 
 ## Running Examples
 
 ### Against Kermit Testnet (Default)
 
-All examples default to Kermit testnet:
+All V3 examples default to Kermit testnet:
 
 ```bash
-python examples/example01_lite_identities.py
+python examples/v3/example_01_lite_identities.py
 ```
 
 ### Against Local DevNet
 
-```bash
-# Set environment variable
-set ACC_API_URL=http://localhost:26660/v3  # Windows
-# export ACC_API_URL=http://localhost:26660/v3  # Linux/Mac
+Edit the endpoint variables at the top of any example:
 
-python examples/example01_lite_identities.py
-```
+```python
+# Comment out Kermit endpoints:
+# KERMIT_V2 = "https://kermit.accumulatenetwork.io/v2"
+# KERMIT_V3 = "https://kermit.accumulatenetwork.io/v3"
 
-### Run All Examples
-
-```bash
-# Run all 12 examples in sequence
-for i in 01 02 03 04 05 06 07 08 09 10 11 12; do
-    python examples/example${i}_*.py
-done
-```
-
-## Example Output
-
-Each example outputs transaction IDs and status:
-
-```
-[Example 1] Lite Identities and Token Accounts
-==================================================
-Generated key pair
-  Public key: a1b2c3d4e5f6...
-  Lite Identity: acc://a1b2c3d4e5f6.../
-  Lite Token Account: acc://a1b2c3d4e5f6.../ACME
-
-[1/3] Requesting tokens from faucet...
-  TxID: 1234567890abcdef...
-  Status: delivered
-
-[2/3] Querying token balance...
-  Balance: 10.00000000 ACME
-
-[3/3] Sending tokens...
-  TxID: abcdef1234567890...
-  Status: delivered
-
-Example completed successfully!
+# Uncomment DevNet endpoints:
+KERMIT_V2 = "http://127.0.0.1:26660/v2"
+KERMIT_V3 = "http://127.0.0.1:26660/v3"
 ```
 
 ## Key Features Demonstrated
@@ -96,7 +62,7 @@ Example completed successfully!
 - **Protocol Compatibility**: V2 and V3 API support
 - **Transaction Building**: Type-safe builders with TxBody
 - **Error Handling**: Comprehensive retry logic and error reporting
-- **Network Integration**: Testnet and DevNet support
+- **Network Integration**: Kermit testnet and local DevNet support
 
 ## Network Configuration
 
@@ -118,10 +84,7 @@ Example completed successfully!
 ## Troubleshooting
 
 ### Network Timeout
-If examples timeout, increase the timeout:
-```python
-client = AccumulateClient(endpoint, timeout=60)
-```
+If examples timeout, check your network connection to Kermit testnet.
 
 ### Faucet Rate Limiting
 Wait a few seconds between faucet requests, or use different accounts.

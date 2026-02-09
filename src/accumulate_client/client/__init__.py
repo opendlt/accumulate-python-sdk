@@ -2,7 +2,7 @@
 Accumulate Python SDK public API surface.
 
 This module re-exports the most commonly used classes and helpers so tests and
-consumers can simply `from src.accumulate_client import ...`.
+consumers can simply `from accumulate_client import ...`.
 """
 
 # ---- Client types -----------------------------------------------------------

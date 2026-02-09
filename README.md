@@ -16,31 +16,33 @@ Production-ready Python SDK for the Accumulate blockchain protocol. Supports all
 ## Installation
 
 ```bash
-pip install accumulate-client
+pip install accumulate-sdk-opendlt
 ```
 
 Or install from source:
 
 ```bash
-git clone https://github.com/opendlt/accumulate-python.git
-cd accumulate-python/unified
+git clone https://github.com/opendlt/accumulate-python-sdk.git
+cd accumulate-python-sdk/unified
 pip install -e ".[dev]"
 ```
 
 ## Quick Start
 
 ```python
-from accumulate_client import AccumulateClient
+from accumulate_client import Accumulate
 from accumulate_client.crypto.ed25519 import Ed25519KeyPair
-from accumulate_client.signing.smart_signer import SmartSigner
 
 # Connect to Kermit testnet
-client = AccumulateClient("https://kermit.accumulatenetwork.io/v3")
+client = Accumulate(
+    "https://kermit.accumulatenetwork.io/v2",
+    v3_endpoint="https://kermit.accumulatenetwork.io/v3",
+)
 
 # Generate key pair and derive lite account URLs
 kp = Ed25519KeyPair.generate()
-lid = kp.lite_identity_url()
-lta = kp.lite_token_account_url()
+lid = kp.derive_lite_identity_url()
+lta = kp.derive_lite_token_account_url("ACME")
 
 print(f"Lite Identity: {lid}")
 print(f"Lite Token Account: {lta}")
@@ -55,22 +57,24 @@ print(f"Account: {account}")
 The `SmartSigner` class handles version tracking automatically:
 
 ```python
-from accumulate_client import AccumulateClient
+from accumulate_client import Accumulate
 from accumulate_client.crypto.ed25519 import Ed25519KeyPair
-from accumulate_client.signing.smart_signer import SmartSigner
-from accumulate_client.convenience import TxBody
+from accumulate_client.convenience import SmartSigner, TxBody
 
-# Connect to testnet
-client = AccumulateClient("https://kermit.accumulatenetwork.io/v3")
+# Connect to Kermit testnet
+client = Accumulate(
+    "https://kermit.accumulatenetwork.io/v2",
+    v3_endpoint="https://kermit.accumulatenetwork.io/v3",
+)
 kp = Ed25519KeyPair.generate()
-lid = kp.lite_identity_url()
-lta = kp.lite_token_account_url()
+lid = kp.derive_lite_identity_url()
+lta = kp.derive_lite_token_account_url("ACME")
 
 # Create SmartSigner - automatically queries and tracks signer version
 signer = SmartSigner(
     client=client,
     keypair=kp,
-    signer_url=lid,
+    signer_url=f"{lid}/1",
 )
 
 # Sign, submit, and wait for delivery in one call
@@ -89,14 +93,15 @@ if result.success:
 
 ## Supported Signature Types
 
-| Type | Key Pair Class | Use Case |
-|------|---------------|----------|
-| Ed25519 | `Ed25519KeyPair` | Default, recommended |
-| RCD1 | `RCD1KeyPair` | Factom compatibility |
-| BTC | `Secp256k1KeyPair` | Bitcoin ecosystem |
-| ETH | `Secp256k1KeyPair` | Ethereum ecosystem |
-| RSA-SHA256 | `RsaKeyPair` | Enterprise/legacy systems |
-| ECDSA-SHA256 | `EcdsaKeyPair` | P-256 curve operations |
+| Type | Signer Class | Use Case |
+|------|-------------|----------|
+| Ed25519 | `Ed25519Signer` | Default, recommended |
+| Legacy Ed25519 | `LegacyEd25519Signer` | Pre-signed message format |
+| RCD1 | `RCD1Signer` | Factom compatibility |
+| BTC | `BTCSigner` | Bitcoin/Secp256k1 ecosystem |
+| ETH | `ETHSigner` | Ethereum/Secp256k1 ecosystem |
+
+Signer classes are in `accumulate_client.signers`.
 
 ## Transaction Builders
 
@@ -127,52 +132,61 @@ TxBody.write_data(entries_hex=[data_hex])
 ## Network Endpoints
 
 ```python
-from accumulate_client import AccumulateClient
+from accumulate_client import Accumulate
 
 # Public networks
-mainnet = AccumulateClient("https://mainnet.accumulatenetwork.io/v3")
-testnet = AccumulateClient("https://kermit.accumulatenetwork.io/v3")
+mainnet = Accumulate.mainnet()
+testnet = Accumulate.testnet()
+
+# Kermit testnet (explicit endpoints)
+kermit = Accumulate(
+    "https://kermit.accumulatenetwork.io/v2",
+    v3_endpoint="https://kermit.accumulatenetwork.io/v3",
+)
 
 # Local development
-devnet = AccumulateClient("http://localhost:26660/v3")
+devnet = Accumulate.devnet()
 ```
 
 ## Examples
 
-See [`examples/`](examples/) for complete working examples:
+See [`examples/v3/`](examples/v3/) for complete working examples:
 
 | Example | Description |
 |---------|-------------|
-| `example01_lite_identities.py` | Lite identity and token account operations |
-| `example02_accumulate_identities.py` | ADI creation |
-| `example03_adi_token_accounts.py` | ADI token account management |
-| `example04_data_accounts.py` | Data account operations |
-| `example05_send_acme_adi_to_adi.py` | ADI-to-ADI transfers |
-| `example06_custom_tokens.py` | Custom token creation |
-| `example09_key_management.py` | Key page and key book management |
-| `example12_quickstart_demo.py` | Complete zero-to-hero workflow |
+| `example_01_lite_identities.py` | Lite identity and token account operations |
+| `example_02_accumulate_identities.py` | ADI creation and credit purchasing |
+| `example_03_adi_token_accounts.py` | ADI token account management |
+| `example_04_data_accounts_entries.py` | Data account creation and WriteData |
+| `example_05_adi_to_adi_transfer.py` | ADI-to-ADI token transfers |
+| `example_06_custom_tokens.py` | Custom token issuer creation |
+| `example_08_query_tx_signatures.py` | Transaction and signature queries |
+| `example_09_key_management.py` | Key page and key book management |
+| `example_10_update_key_page_threshold.py` | Multi-sig threshold updates |
+| `example_11_multi_signature_types.py` | Ed25519, RCD1, BTC, ETH signatures |
+| `example_12_quickstart_demo.py` | Complete zero-to-hero workflow |
+| `example_13_adi_to_adi_transfer_with_header_options.py` | Memo, metadata, expire, hold_until |
 
 Run any example:
 ```bash
-python examples/example01_lite_identities.py
+python examples/v3/example_01_lite_identities.py
 ```
 
 ## Project Structure
 
 ```
 src/accumulate_client/
-├── api_client.py      # V2/V3 API client
-├── convenience.py     # TxBody builders and helpers
-├── crypto/            # Key pair implementations
-├── signing/           # SmartSigner, signature management
-├── signers/           # Signature type classes
-├── tx/                # Transaction builders
+├── facade.py          # Accumulate unified client (V2/V3)
+├── api_client.py      # Low-level API client
+├── convenience.py     # SmartSigner, TxBody, QuickStart, Wallet, ADI
+├── crypto/            # Key pair implementations (Ed25519, Secp256k1)
+├── signers/           # Signature type classes (Ed25519, RCD1, BTC, ETH)
+├── tx/                # Transaction builders and header options
 ├── types.py           # Protocol types (103 types)
 ├── enums.py           # Protocol enums (14 enums)
 └── runtime/           # URL handling, codecs, validation
 examples/
-├── example01_*.py     # V3 API examples with SmartSigner
-└── ...                # 12 complete workflow examples
+└── v3/                # V3 API examples with SmartSigner (12 examples)
 tests/
 ├── unit/              # Unit tests
 ├── integration/       # Network integration tests
@@ -197,7 +211,7 @@ ruff format src/
 
 ### Self-Check
 ```bash
-python scripts/selfcheck.py
+python tooling/scripts/selfcheck.py
 ```
 
 Expected output:

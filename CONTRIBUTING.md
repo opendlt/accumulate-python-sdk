@@ -13,7 +13,7 @@ Thank you for your interest in contributing to the Accumulate Python SDK!
    # source .venv/bin/activate  # Linux/Mac
    pip install -e ".[dev]"
    ```
-4. Run `python scripts/selfcheck.py` to validate your setup
+4. Run `python tooling/scripts/selfcheck.py` to validate your setup
 
 ## Code Guidelines
 
@@ -42,7 +42,7 @@ These files are regenerated from the Go repository using code generation tools. 
 
 1. **Run Quality Gates**
    ```bash
-   python scripts/green_gate.py
+   python tooling/scripts/green_gate.py
    ```
 
 2. **Commit Standards**
@@ -82,7 +82,7 @@ pytest tests/integration/ -v
 ### Kermit Testnet
 ```bash
 # Run examples against testnet
-python examples/example01_lite_identities.py
+python examples/v3/example_01_lite_identities.py
 ```
 
 ## Release Process
@@ -91,7 +91,7 @@ python examples/example01_lite_identities.py
 2. Update CHANGELOG.md with release notes
 3. Run full validation suite:
    ```bash
-   python scripts/green_gate.py
+   python tooling/scripts/green_gate.py
    ```
 4. Create release tag and push
 

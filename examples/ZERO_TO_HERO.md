@@ -4,101 +4,143 @@ This guide walks you through using the Accumulate Python SDK from key generation
 
 ## Quick Start
 
-### 1. Environment Setup
+### 1. Install
 
 ```bash
-# Create and activate virtual environment
-python -m venv .venv
-.venv\Scripts\activate  # Windows
-# source .venv/bin/activate  # Linux/Mac
-
-# Install the package
-pip install -e .
-
-# Discover DevNet endpoints
-python tool/devnet_discovery.py
+pip install accumulate-sdk-opendlt
 ```
 
-Set the environment variables from the discovery output:
+Or from source:
+
 ```bash
-# PowerShell
-$env:ACC_RPC_URL_V2="http://localhost:26660/v2"
-$env:ACC_RPC_URL_V3="http://localhost:26660/v3"
-$env:ACC_FAUCET_ACCOUNT="acc://a21555da824d14f3f066214657a44e6a1a347dad3052a23a/ACME"
-
-# Bash
-export ACC_RPC_URL_V2="http://localhost:26660/v2"
-export ACC_RPC_URL_V3="http://localhost:26660/v3"
-export ACC_FAUCET_ACCOUNT="acc://a21555da824d14f3f066214657a44e6a1a347dad3052a23a/ACME"
+git clone https://github.com/opendlt/accumulate-python-sdk.git
+cd accumulate-python-sdk/unified
+pip install -e ".[dev]"
 ```
 
-### 2. Complete Workflow
+### 2. Run the QuickStart Demo
 
-Run the complete zero-to-hero demo:
 ```bash
-python examples/999_zero_to_hero.py
+python examples/v3/example_12_quickstart_demo.py
 ```
+
+This single example creates a wallet, funds it, creates an ADI, token accounts, data accounts, and more.
 
 ## Step-by-Step Guide
 
-### Step 1: Generate Keys and URLs (100_keygen_lite_urls.py)
+### Step 1: Generate Keys and URLs
 
 ```python
-from cryptography.hazmat.primitives.asymmetric import ed25519
-import hashlib
+from accumulate_client.crypto.ed25519 import Ed25519KeyPair
 
 # Generate Ed25519 keypair
-private_key = ed25519.Ed25519PrivateKey.generate()
-public_key_bytes = private_key.public_key().public_bytes(...)
+kp = Ed25519KeyPair.generate()
 
-# Derive Lite Identity URL (with checksum)
-def derive_lite_identity_url(public_key_bytes):
-    key_hash_full = hashlib.sha256(public_key_bytes).digest()
-    key_hash_20 = key_hash_full[:20]
-    key_str = key_hash_20.hex()
+# Derive Lite Identity and Token Account URLs
+lid = kp.derive_lite_identity_url()
+lta = kp.derive_lite_token_account_url("ACME")
 
-    # Calculate checksum
-    checksum_full = hashlib.sha256(key_str.encode('utf-8')).digest()
-    checksum = checksum_full[28:].hex()
-
-    return f"acc://{key_str}{checksum}"
-
-# Derive Lite Token Account URL
-def derive_lite_token_account_url(public_key_bytes):
-    lid = derive_lite_identity_url(public_key_bytes)
-    return f"{lid}/ACME"
+print(f"Lite Identity: {lid}")
+print(f"Lite Token Account: {lta}")
 ```
 
 **Output:**
-- Lite Identity (LID): For signing transactions
-- Lite Token Account (LTA): For receiving ACME tokens
+- Lite Identity (LID): `acc://{hash40}{checksum8}` — for signing transactions
+- Lite Token Account (LTA): `acc://{hash40}{checksum8}/ACME` — for receiving ACME tokens
 
-### Step 2: Fund from Faucet (120_faucet_local_devnet.py)
+### Step 2: Connect to Kermit Testnet
 
 ```python
-from accumulate_client import AccumulateClient
+from accumulate_client import Accumulate
 
-# Create V2 client for faucet
-v2_client = AccumulateClient(v2_url)
-
-# Request tokens from faucet
-result = v2_client.faucet({"url": lta_url})
-print(f"Transaction hash: {result['transactionHash']}")
+client = Accumulate(
+    "https://kermit.accumulatenetwork.io/v2",
+    v3_endpoint="https://kermit.accumulatenetwork.io/v3",
+)
 ```
 
-### Step 3: Buy Credits (210_buy_credits_lite.py)
+Or use factory methods:
 
 ```python
-# Create AddCredits transaction
-add_credits_tx = {
-    "type": "addCredits",
-    "recipient": {"url": lid_url},
-    "amount": "1000000"  # 1M credits
-}
+client = Accumulate.testnet()    # Generic testnet
+client = Accumulate.devnet()     # Local DevNet (localhost:26660)
+client = Accumulate.mainnet()    # Mainnet (production)
+```
 
-# Sign and submit transaction
-envelope = create_envelope(lta_url, add_credits_tx, private_key)
-result = v3_client.execute(envelope)
+### Step 3: Fund from Faucet
+
+```python
+# Request tokens from Kermit faucet
+result = client.faucet(lta)
+print(f"Faucet TxID: {result}")
+```
+
+### Step 4: Set Up SmartSigner
+
+```python
+from accumulate_client.convenience import SmartSigner, TxBody
+
+# SmartSigner automatically tracks signer version
+signer = SmartSigner(client, kp, f"{lid}/1")
+```
+
+### Step 5: Buy Credits
+
+```python
+import hashlib
+
+oracle = client.get_oracle_price()
+result = signer.sign_submit_and_wait(
+    principal=lta,
+    body=TxBody.add_credits(
+        recipient=lid,
+        amount=1000000,
+        oracle=oracle,
+    ),
+)
+print(f"AddCredits: {result.txid}")
+```
+
+### Step 6: Create an ADI
+
+```python
+# Generate ADI keypair
+adi_kp = Ed25519KeyPair.generate()
+adi_key_hash = hashlib.sha256(adi_kp.public_key_bytes()).digest().hex()
+
+adi_url = "acc://my-identity.acme"
+book_url = f"{adi_url}/book"
+
+result = signer.sign_submit_and_wait(
+    principal=lta,
+    body=TxBody.create_identity(adi_url, book_url, adi_key_hash),
+)
+print(f"ADI created: {result.txid}")
+```
+
+## The QuickStart API (Easiest Path)
+
+For rapid prototyping, use `QuickStart` which wraps all the above into single method calls:
+
+```python
+from accumulate_client.convenience import QuickStart
+
+# Connect to Kermit testnet
+qs = QuickStart.kermit()
+
+# Create and fund a wallet
+wallet = qs.create_wallet()
+qs.fund_wallet(wallet)
+
+# Create an ADI with key book and page
+adi = qs.setup_adi(wallet, "my-adi-name")
+
+# Create a token account under the ADI
+qs.create_token_account(adi, "tokens")
+
+# Create a data account and write data
+qs.create_data_account(adi, "mydata")
+qs.write_data(adi, "mydata", ["Hello", "World"])
 ```
 
 ## Key Concepts
@@ -109,186 +151,85 @@ Accumulate uses hierarchical URLs:
 
 - **Lite Identity**: `acc://{hash40}{checksum8}`
 - **Lite Token Account**: `acc://{hash40}{checksum8}/ACME`
-- **ADI**: `acc://my-identity`
-- **ADI Sub-account**: `acc://my-identity/tokens`
+- **ADI**: `acc://my-identity.acme`
+- **ADI Sub-account**: `acc://my-identity.acme/tokens`
 
-### Transaction Envelope Format
+### API Levels
 
-```python
-envelope = {
-    "transaction": {
-        "header": {
-            "principal": "acc://...",  # Signing account
-            "timestamp": 1234567890000  # Microseconds
-        },
-        "body": {
-            "type": "addCredits",      # Transaction type
-            # ... transaction-specific fields
-        }
-    },
-    "signatures": [{
-        "type": "ed25519",
-        "publicKey": "...",            # Hex-encoded public key
-        "signature": "..."             # Hex-encoded signature
-    }]
-}
-```
+| Level | Class | Best For |
+|-------|-------|----------|
+| High | `QuickStart` | Prototyping, scripts, learning |
+| Mid | `SmartSigner` + `TxBody` | Production apps with full control |
+| Low | `AccumulateV3Client` | Custom protocols, raw JSON-RPC |
 
 ### API Versions
 
 - **V2 API**: Stable, used for faucet and basic queries
-- **V3 API**: New features, transaction submission, network status
+- **V3 API**: Full features, transaction submission, network status
 
 ## Common Operations
 
 ### Query Account
 
 ```python
-# V3 query (preferred)
-result = client.call('query', {"url": "acc://..."})
-
-# V2 query
-result = client.query({"url": "acc://..."})
+result = client.query("acc://my-identity.acme/tokens")
+print(f"Balance: {result.get('balance')}")
 ```
 
-### Submit Transaction
+### Send Tokens
 
 ```python
-# V3 only
-result = client.execute(envelope)
+result = signer.sign_submit_and_wait(
+    principal="acc://my-identity.acme/tokens",
+    body=TxBody.send_tokens_single(
+        to_url="acc://recipient.acme/tokens",
+        amount="100000000",
+    ),
+)
 ```
 
-### Check Network Status
+### Write Data
 
 ```python
-# V3 only
-status = client.call('network-status', {})
-```
+import binascii
 
-## Advanced Examples
-
-### Create ADI (Identity)
-
-```python
-create_adi_tx = {
-    "type": "createIdentity",
-    "url": "acc://my-identity",
-    "keyBookUrl": "acc://my-identity/book",
-    "keyPageUrl": "acc://my-identity/book/1"
-}
-
-envelope = create_envelope(lid_url, create_adi_tx, private_key)
-result = v3_client.execute(envelope)
-```
-
-### Transfer Tokens
-
-```python
-send_tokens_tx = {
-    "type": "sendTokens",
-    "to": [{"url": "acc://recipient", "amount": "1000000"}]
-}
-
-envelope = create_envelope(sender_url, send_tokens_tx, private_key)
-result = v3_client.execute(envelope)
+entries_hex = [binascii.hexlify(b"Hello, Accumulate!").decode()]
+result = signer.sign_submit_and_wait(
+    principal="acc://my-identity.acme/data",
+    body=TxBody.write_data(entries_hex=entries_hex),
+)
 ```
 
 ## Error Handling
 
-Common error patterns:
-
 ```python
+from accumulate_client.api_client import (
+    AccumulateAPIError,
+    AccumulateNetworkError,
+    AccumulateValidationError,
+)
+
 try:
-    result = client.faucet({"url": lta_url})
-except Exception as e:
-    if "validation" in str(e).lower():
-        print("Invalid request parameters")
-    elif "insufficient" in str(e).lower():
-        print("Insufficient balance or credits")
-    else:
-        print(f"Unexpected error: {e}")
+    result = client.query("acc://nonexistent.acme")
+except AccumulateValidationError as e:
+    print(f"Validation error: {e}")
+except AccumulateNetworkError as e:
+    print(f"Network error: {e}")
+except AccumulateAPIError as e:
+    print(f"API error: {e}")
 ```
 
-## DevNet Development
+## Complete Examples
 
-### Prerequisites
+See [`v3/`](v3/) for 12 complete, runnable examples that cover every major SDK feature.
 
-1. DevNet running locally
-2. Environment variables set from `devnet_discovery.py`
-3. Network connectivity to localhost:26660
-
-### Best Practices
-
-1. **Always use discovery tool** to get current endpoints
-2. **Wait for transactions** to be processed (3-5 seconds)
-3. **Handle errors gracefully** - DevNet can be unstable
-4. **Use generous timeouts** for integration tests
-5. **Check balances** before and after operations
-
-### DevNet Limitations
-
-- Faucet may have rate limits
-- Transactions may occasionally fail
-- Network resets lose all data
-- Some V3 features may be experimental
-
-## Testing
-
-```bash
-# Run all tests
-pytest
-
-# Run specific test suites
-pytest tests/unit/           # Unit tests
-pytest tests/conformance/    # TS SDK compatibility
-pytest tests/integration/    # DevNet integration
-
-# Run with verbose output
-pytest -v
-
-# Run quietly
-pytest -q
-```
-
-## Troubleshooting
-
-### Environment Issues
-
-**Problem**: Environment variables not set
-**Solution**: Run `python tool/devnet_discovery.py` and set variables
-
-**Problem**: DevNet not accessible
-**Solution**: Check DevNet is running, check firewall/network
-
-### Transaction Issues
-
-**Problem**: "Insufficient credits"
-**Solution**: Buy more credits with AddCredits transaction
-
-**Problem**: "Account does not exist"
-**Solution**: Create account first or fund with faucet
-
-**Problem**: "Invalid signature"
-**Solution**: Check transaction envelope format and signing
-
-### API Issues
-
-**Problem**: "Method not found"
-**Solution**: Check API version (V2 vs V3) and method availability
-
-**Problem**: "Scope is missing"
-**Solution**: V3 queries may need additional parameters
-
-## Next Steps
-
-1. **Explore Examples**: Run all examples in `examples/` directory
-2. **Read Tests**: Review test files for usage patterns
-3. **Check API Docs**: Refer to Accumulate documentation
-4. **Join Community**: Connect with other Accumulate developers
+Start with:
+1. `v3/example_01_lite_identities.py` — basics
+2. `v3/example_02_accumulate_identities.py` — ADI creation
+3. `v3/example_12_quickstart_demo.py` — everything in one script
 
 ## Resources
 
-- [Accumulate Documentation](https://docs.accumulatenetwork.io)
-- [API Reference](https://docs.accumulatenetwork.io/accumulate/developers)
-- [DevNet Setup](https://docs.accumulatenetwork.io/accumulate/developers/devnet)
-- [Transaction Types](https://docs.accumulatenetwork.io/accumulate/developers/transactions)
+- [Accumulate Protocol](https://accumulatenetwork.io/)
+- [API Documentation](https://docs.accumulatenetwork.io/)
+- [Kermit Testnet Explorer](https://kermit.explorer.accumulatenetwork.io/)
