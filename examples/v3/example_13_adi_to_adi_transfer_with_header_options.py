@@ -14,19 +14,14 @@ This example demonstrates:
 Uses Kermit public testnet endpoints.
 """
 
-import sys
-import os
 import time
 import hashlib
 from datetime import datetime, timezone, timedelta
 
-# Add parent to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
-from src.accumulate_client import Accumulate, NetworkStatusOptions
-from src.accumulate_client.convenience import SmartSigner, TxBody
-from src.accumulate_client.crypto.ed25519 import Ed25519KeyPair
-from src.accumulate_client.tx.header import ExpireOptions, HoldUntilOptions
+from accumulate_client import Accumulate, NetworkStatusOptions
+from accumulate_client.convenience import SmartSigner, TxBody
+from accumulate_client.crypto.ed25519 import Ed25519KeyPair
+from accumulate_client.tx.header import ExpireOptions, HoldUntilOptions
 
 # Kermit public testnet endpoints
 KERMIT_V2 = "https://kermit.accumulatenetwork.io/v2"
@@ -583,7 +578,7 @@ def sign_submit_and_wait_with_header_options(
         }
 
         # Compute transaction hash using canonical JSON
-        from src.accumulate_client.canonjson import dumps_canonical
+        from accumulate_client.canonjson import dumps_canonical
         tx_bytes = dumps_canonical(transaction).encode('utf-8')
         tx_hash = hashlib.sha256(tx_bytes).digest()
 

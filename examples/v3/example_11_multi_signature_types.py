@@ -10,18 +10,14 @@ This example demonstrates:
 Uses Kermit public testnet endpoints.
 """
 
-import sys
 import os
 import time
 import hashlib
 
-# Add parent to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
-from src.accumulate_client import Accumulate, NetworkStatusOptions
-from src.accumulate_client.convenience import SmartSigner, TxBody
-from src.accumulate_client.crypto.ed25519 import Ed25519KeyPair
-from src.accumulate_client.signers import (
+from accumulate_client import Accumulate, NetworkStatusOptions
+from accumulate_client.convenience import SmartSigner, TxBody
+from accumulate_client.crypto.ed25519 import Ed25519KeyPair
+from accumulate_client.signers import (
     Ed25519Signer,
     LegacyEd25519Signer,
     RCD1Signer,

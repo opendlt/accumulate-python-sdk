@@ -13,14 +13,9 @@ a few lines per operation.
 Uses Kermit public testnet endpoints by default.
 """
 
-import sys
-import os
 import time
 
-# Add parent to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
-from src.accumulate_client.convenience import QuickStart
+from accumulate_client.convenience import QuickStart
 
 
 def main():
@@ -161,7 +156,7 @@ def run_quickstart_demo(acc: QuickStart):
     # =========================================================
     print("--- Step 9: Add Another Key ---\n")
 
-    from src.accumulate_client.crypto.ed25519 import Ed25519PrivateKey
+    from accumulate_client.crypto.ed25519 import Ed25519PrivateKey
     new_key = Ed25519PrivateKey.generate()
 
     acc.add_key_to_adi(adi, new_key)

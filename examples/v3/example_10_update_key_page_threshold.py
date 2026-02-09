@@ -9,17 +9,12 @@ This example demonstrates:
 Uses local DevNet endpoint (configure as needed).
 """
 
-import sys
-import os
 import time
 import hashlib
 
-# Add parent to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
-from src.accumulate_client import Accumulate, NetworkStatusOptions
-from src.accumulate_client.convenience import SmartSigner, TxBody, KeyManager
-from src.accumulate_client.crypto.ed25519 import Ed25519KeyPair
+from accumulate_client import Accumulate, NetworkStatusOptions
+from accumulate_client.convenience import SmartSigner, TxBody, KeyManager
+from accumulate_client.crypto.ed25519 import Ed25519KeyPair
 
 # Kermit public testnet endpoints
 ENDPOINT_V2 = "https://kermit.accumulatenetwork.io/v2"
