@@ -29,11 +29,8 @@ from .enums import *
 from .types import *
 from .signatures import *
 from .transactions import *
-from .json_rpc_client import JsonRpcClient
 
 # Enhanced runtime components
-from .api_client import AccumulateClient as LegacyAccumulateClient
-from .api_client import mainnet_client, testnet_client, local_client
 from .runtime.errors import *
 from .runtime.codec import *
 from .runtime.url import AccountUrl
@@ -76,6 +73,11 @@ from .v3.options import (
 # Unified facade (primary entry point)
 from .facade import Accumulate, AccumulateClient
 
+# Factory helpers (delegates to Accumulate facade)
+def mainnet_client(**kwargs): return Accumulate.mainnet(**kwargs)
+def testnet_client(**kwargs): return Accumulate.testnet(**kwargs)
+def local_client(**kwargs): return Accumulate.local(**kwargs)
+
 # Streaming client
 from .client import StreamingAccumulateClient
 
@@ -101,9 +103,6 @@ from .monitoring import (
     instrument_client, instrument_function, collect_system_metrics,
     ClientInstrumentation
 )
-
-# Generated client (for compatibility)
-from .generated_client import AccumulateClient as GeneratedAccumulateClient
 
 # Signing and transaction infrastructure
 from .signers import *
@@ -170,10 +169,7 @@ __all__ = [
     "ListSnapshotsOptions",
     "SubscribeOptions",
 
-    # Legacy clients
-    "JsonRpcClient",
-    "LegacyAccumulateClient",
-    "GeneratedAccumulateClient",
+    # Streaming
     "StreamingAccumulateClient",
 
     # Client factories

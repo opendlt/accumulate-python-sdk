@@ -508,10 +508,10 @@ class ParitySuite:
             self.component_counts['transactions'] = len(BUILDER_REGISTRY)
 
             # Count API methods
-            from accumulate_client.api_client import AccumulateClient
-            api_methods = [name for name in dir(AccumulateClient)
+            from accumulate_client import Accumulate
+            api_methods = [name for name in dir(Accumulate)
                           if not name.startswith('_') and
-                          callable(getattr(AccumulateClient, name)) and
+                          callable(getattr(Accumulate, name)) and
                           name not in {'for_network'}]
             self.component_counts['api_methods'] = len(api_methods)
 

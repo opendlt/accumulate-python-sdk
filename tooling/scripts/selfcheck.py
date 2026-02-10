@@ -144,9 +144,9 @@ def check_import_counts():
             log_result('import_transactions', False, f"Expected ~{EXPECTED_COUNTS['transactions']} transaction types, got {actual_transactions}")
 
         # Check API methods
-        from accumulate_client.api_client import AccumulateClient
-        api_methods = [name for name in dir(AccumulateClient)
-                      if not name.startswith('_') and callable(getattr(AccumulateClient, name))
+        from accumulate_client import Accumulate
+        api_methods = [name for name in dir(Accumulate)
+                      if not name.startswith('_') and callable(getattr(Accumulate, name))
                       and not name in {'for_network'}]
         actual_api_methods = len(api_methods)
         check_results['counts']['api_methods'] = actual_api_methods
@@ -491,7 +491,7 @@ def check_signature_vectors():
 def check_api_method_count():
     """Check API method count and auto-generate stubs if needed."""
     try:
-        from accumulate_client.api_client import AccumulateClient
+        from accumulate_client import Accumulate
 
         # Build list of expected API methods (Phase 2 report)
         expected_methods = [

@@ -13,7 +13,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Callable, Union
 from uuid import uuid4
 
-from ..api_client import AccumulateClient
+from ..facade import Accumulate as AccumulateClient
 from ..tx import Transaction
 from ..signatures import Signature
 from .batch import BatchClient

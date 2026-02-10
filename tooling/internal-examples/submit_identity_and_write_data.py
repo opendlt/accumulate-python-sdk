@@ -24,7 +24,7 @@ from typing import Optional
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from accumulate_client.api_client import AccumulateClient
+from accumulate_client import Accumulate
 from accumulate_client.tx.builders import get_builder_for
 from accumulate_client.signers.ed25519 import Ed25519Signer
 from accumulate_client.crypto.ed25519 import Ed25519PrivateKey

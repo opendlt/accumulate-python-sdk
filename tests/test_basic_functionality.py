@@ -197,26 +197,12 @@ class TestClientConfiguration:
     def test_client_creation_with_string(self):
         """Test client creation with endpoint string."""
         client = AccumulateClient("https://example.com")
-        assert client.config.endpoint == "https://example.com"
-        assert client.scheme == "https"
-        assert client.host == "example.com"
-        assert client.port == 443
+        assert client.endpoint == "https://example.com"
 
     def test_client_creation_with_config(self):
-        """Test client creation with configuration object."""
-        from accumulate_client.api_client import ClientConfig
-
-        config = ClientConfig(
-            endpoint="http://localhost:8080",
-            timeout=60.0,
-            max_retries=5
-        )
-        client = AccumulateClient(config)
-
-        assert client.config.timeout == 60.0
-        assert client.config.max_retries == 5
-        assert client.scheme == "http"
-        assert client.port == 8080
+        """Test client creation with timeout."""
+        client = AccumulateClient("http://localhost:8080", timeout=60.0)
+        assert client.endpoint == "http://localhost:8080"
 
     def test_well_known_networks(self):
         """Test well-known network resolution."""
@@ -226,27 +212,27 @@ class TestClientConfiguration:
         testnet = testnet_client()
         local = local_client()
 
-        assert "mainnet" in mainnet.config.endpoint or "accumulatenetwork.io" in mainnet.config.endpoint
-        assert "testnet" in testnet.config.endpoint or "accumulatenetwork.io" in testnet.config.endpoint
-        assert "127.0.0.1" in local.config.endpoint or "localhost" in local.config.endpoint or local.config.endpoint == "local"
+        assert "accumulatenetwork.io" in mainnet.endpoint
+        assert "accumulatenetwork.io" in testnet.endpoint
+        assert "127.0.0.1" in local.endpoint or "localhost" in local.endpoint
 
     def test_client_method_existence(self):
         """Test that client has all required API methods."""
         client = AccumulateClient("https://example.com")
 
-        # Core methods
-        assert hasattr(client, 'node_info')
-        assert hasattr(client, 'network_status')
+        # Facade methods
         assert hasattr(client, 'query')
         assert hasattr(client, 'submit')
         assert hasattr(client, 'faucet')
-
-        # V2 API methods
-        assert hasattr(client, 'status')
-        assert hasattr(client, 'describe')
-        assert hasattr(client, 'version')
-        assert hasattr(client, 'query_tx')
         assert hasattr(client, 'execute')
+        assert hasattr(client, 'execute_direct')
+        assert hasattr(client, 'query_chain')
+        assert hasattr(client, 'query_data')
+        assert hasattr(client, 'query_directory')
+
+        # Sub-clients
+        assert hasattr(client, 'v2')
+        assert hasattr(client, 'v3')
 
 
 class TestIntegration:
@@ -268,7 +254,7 @@ class TestIntegration:
         client = AccumulateClient("https://invalid-endpoint-that-does-not-exist.com")
 
         # This should not raise during client creation
-        assert client.config.endpoint == "https://invalid-endpoint-that-does-not-exist.com"
+        assert client.endpoint == "https://invalid-endpoint-that-does-not-exist.com"
 
     def test_comprehensive_example(self):
         """Test a comprehensive usage example."""

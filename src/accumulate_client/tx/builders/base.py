@@ -220,42 +220,119 @@ class BaseTxBuilder(Generic[BodyT], ABC):
 
     def _restore_field_types(self, fields: Dict[str, Any]) -> Dict[str, Any]:
         """Restore correct field types based on model schema when loading from dict."""
+        import typing
+        from pydantic import BaseModel as _PydanticBaseModel
+
+        def _unwrap_optional(annotation):
+            """Unwrap Optional[X] -> X."""
+            origin = getattr(annotation, '__origin__', None)
+            if origin is typing.Union:
+                args = [a for a in annotation.__args__ if a is not type(None)]
+                if len(args) == 1:
+                    return args[0]
+            return annotation
+
+        def _is_bytes(annotation):
+            return _unwrap_optional(annotation) is bytes
+
+        def _is_list_of_bytes(annotation):
+            unwrapped = _unwrap_optional(annotation)
+            return (hasattr(unwrapped, '__origin__') and
+                    unwrapped.__origin__ is list and
+                    len(getattr(unwrapped, '__args__', ())) > 0 and
+                    unwrapped.__args__[0] is bytes)
+
+        def _is_basemodel_subclass(annotation):
+            unwrapped = _unwrap_optional(annotation)
+            return isinstance(unwrapped, type) and issubclass(unwrapped, _PydanticBaseModel)
+
+        def _get_basemodel_class(annotation):
+            return _unwrap_optional(annotation)
+
+        def _get_list_element_models(annotation):
+            """For List[X] or List[Union[A,B,...]], return list of BaseModel subclasses."""
+            unwrapped = _unwrap_optional(annotation)
+            origin = getattr(unwrapped, '__origin__', None)
+            if origin is not list:
+                return []
+            args = getattr(unwrapped, '__args__', ())
+            if not args:
+                return []
+            elem = args[0]
+            # Direct BaseModel subclass
+            if isinstance(elem, type) and issubclass(elem, _PydanticBaseModel):
+                return [elem]
+            # Union of types (e.g. Union[AddKeyOp, RemoveKeyOp, ...])
+            elem_origin = getattr(elem, '__origin__', None)
+            if elem_origin is typing.Union:
+                return [a for a in elem.__args__
+                        if isinstance(a, type) and issubclass(a, _PydanticBaseModel)]
+            return []
+
+        def _build_alias_map(model_cls):
+            """Build {alias_or_name: field_info} lookup for a model."""
+            mapping = {}
+            for fname, finfo in model_cls.model_fields.items():
+                mapping[fname] = finfo
+                alias = getattr(finfo, 'alias', None)
+                if alias and alias != fname:
+                    mapping[alias] = finfo
+            return mapping
+
+        def _restore_nested(model_cls, data):
+            """Recursively restore field types within a nested model dict."""
+            if not isinstance(data, dict) or not hasattr(model_cls, 'model_fields'):
+                return data
+            alias_map = _build_alias_map(model_cls)
+            restored = {}
+            for k, v in data.items():
+                fi = alias_map.get(k)
+                if fi and fi.annotation:
+                    if _is_bytes(fi.annotation) and isinstance(v, str) and len(v) % 2 == 0:
+                        try:
+                            restored[k] = bytes.fromhex(v)
+                            continue
+                        except ValueError:
+                            pass
+                    elif _is_list_of_bytes(fi.annotation) and isinstance(v, list):
+                        try:
+                            restored[k] = [
+                                bytes.fromhex(item) if isinstance(item, str) and len(item) % 2 == 0 else item
+                                for item in v
+                            ]
+                            continue
+                        except ValueError:
+                            pass
+                    elif _is_basemodel_subclass(fi.annotation) and isinstance(v, dict):
+                        restored[k] = _restore_nested(_get_basemodel_class(fi.annotation), v)
+                        continue
+                    else:
+                        # Check for List[BaseModel] or List[Union[BaseModel,...]]
+                        elem_models = _get_list_element_models(fi.annotation)
+                        if elem_models and isinstance(v, list):
+                            restored_list = []
+                            for item in v:
+                                if isinstance(item, dict):
+                                    # Pick the right model by matching 'type' field
+                                    matched = elem_models[0]  # default to first
+                                    if 'type' in item and len(elem_models) > 1:
+                                        for m in elem_models:
+                                            defaults = {fn: fi2.default for fn, fi2 in m.model_fields.items()
+                                                        if fn == 'type' and fi2.default is not None}
+                                            if defaults.get('type') == item['type']:
+                                                matched = m
+                                                break
+                                    restored_list.append(_restore_nested(matched, item))
+                                else:
+                                    restored_list.append(item)
+                            restored[k] = restored_list
+                            continue
+                restored[k] = v
+            return restored
+
         # If body class has model fields (generated model), use schema to restore types
         if hasattr(self.body_cls, 'model_fields') and self.body_cls.model_fields:
-            restored_fields = {}
-            for field_name, field_value in fields.items():
-                field_info = self.body_cls.model_fields.get(field_name)
-                if field_info and field_info.annotation:
-                    # Check if this should be bytes but is currently a hex string
-                    is_bytes_field = field_info.annotation == bytes
-                    is_list_of_bytes = (hasattr(field_info.annotation, '__origin__') and
-                                       field_info.annotation.__origin__ == list and
-                                       len(field_info.annotation.__args__) > 0 and
-                                       field_info.annotation.__args__[0] == bytes)
-
-                    if is_bytes_field or is_list_of_bytes:
-                        try:
-                            if is_bytes_field and isinstance(field_value, str) and len(field_value) % 2 == 0:
-                                # Single bytes field - convert hex string back to bytes
-                                restored_fields[field_name] = bytes.fromhex(field_value)
-                                continue
-                            elif is_list_of_bytes and isinstance(field_value, list):
-                                # List of bytes - convert each hex string back to bytes
-                                restored_list = []
-                                for item in field_value:
-                                    if isinstance(item, str) and len(item) % 2 == 0:
-                                        restored_list.append(bytes.fromhex(item))
-                                    else:
-                                        restored_list.append(item)
-                                restored_fields[field_name] = restored_list
-                                continue
-                        except ValueError:
-                            # Not a valid hex string, keep as is
-                            pass
-
-                # Keep original value if no conversion needed
-                restored_fields[field_name] = field_value
-            return restored_fields
+            return _restore_nested(self.body_cls, fields)
 
         # No schema available, return as-is
         return fields
@@ -403,10 +480,10 @@ class BaseTxBuilder(Generic[BodyT], ABC):
         body = self.to_body()
 
         # Create transaction structure matching Go protocol.Transaction
-        # The Transaction struct contains header and body, signatures are handled separately
         transaction = {
             'header': header_fields,
-            'body': body
+            'body': body,
+            'signatures': []
         }
 
         return transaction

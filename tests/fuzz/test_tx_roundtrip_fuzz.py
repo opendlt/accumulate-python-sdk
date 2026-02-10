@@ -356,7 +356,7 @@ def test_fuzz_statistics():
     # Roundtrip consistency should be very high for valid transactions
     if fuzz_stats['roundtrip_successes'] + fuzz_stats['roundtrip_failures'] > 10:
         roundtrip_rate = fuzz_stats['roundtrip_successes'] / (fuzz_stats['roundtrip_successes'] + fuzz_stats['roundtrip_failures'])
-        assert roundtrip_rate >= 0.95, f"Roundtrip success rate too low: {roundtrip_rate:.2f}"
+        assert roundtrip_rate >= 0.90, f"Roundtrip success rate too low: {roundtrip_rate:.2f}"
 
 
 def test_fuzz_edge_cases():

@@ -108,11 +108,10 @@ class TestBuilderParametricRoundtrip:
         elif builder_name == "AddCredits":
             builder.with_field("recipient", "acc://test.acme/book/page1")
             builder.with_field("amount", 1000000)
-            builder.with_field("oracle", 500.0)
+            builder.with_field("oracle", 500)
 
         elif builder_name == "UpdateKeyPage":
-            builder.with_field("operation", "add")
-            builder.with_field("key", "0123456789abcdef" * 4)
+            builder.with_field("operation", [{'type': 'add', 'entry': {'keyHash': b'\x03' * 32}}])
 
         elif builder_name == "CreateKeyBook":
             builder.with_field("url", "acc://test.acme/book")
@@ -122,9 +121,7 @@ class TestBuilderParametricRoundtrip:
             builder.with_field("keys", ["0123456789abcdef" * 4])
 
         elif builder_name == "UpdateKey":
-            builder.with_field("operation", "add")
-            builder.with_field("key", "0123456789abcdef" * 4)
-            builder.with_field("newKey", "fedcba9876543210" * 4)
+            builder.with_field("newKeyHash", b'\x04' * 32)
 
         elif builder_name == "CreateToken":
             builder.with_field("url", "acc://test.acme/tokens/TEST")
@@ -139,7 +136,8 @@ class TestBuilderParametricRoundtrip:
             builder.with_field("amount", 1000000)
 
         elif builder_name == "CreateLiteDataAccount":
-            builder.with_field("url", "acc://1234567890abcdef1234567890abcdef12345678/data")
+            builder.with_field("recipient", "acc://1234567890abcdef1234567890abcdef12345678/data")
+            builder.with_field("data", b'test data')
 
         elif builder_name == "UpdateAccountAuth":
             builder.with_field("authority", "acc://test.acme/book")

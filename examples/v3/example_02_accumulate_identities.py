@@ -8,6 +8,23 @@ This example demonstrates:
 - Adding credits to lite identities and key pages
 - Using SmartSigner API for auto-version tracking
 
+API Level: SmartSigner + TxBody (mid-level convenience)
+
+This example uses two convenience classes from accumulate_client.convenience:
+
+  SmartSigner — handles the entire sign/submit/poll lifecycle:
+    1. Queries signer version from the network
+    2. Binary-encodes signature metadata, tx header, and tx body
+    3. Computes tx_hash = SHA256(SHA256(header) + SHA256(body))
+    4. Computes and Ed25519-signs preimage = SHA256(initiator + tx_hash)
+    5. Assembles the JSON envelope and submits via V3 JSON-RPC
+    6. Polls until delivered or failed
+
+  TxBody — static factory that returns correctly-structured body dicts:
+    - TxBody.add_credits(recipient, amount, oracle) → {"type": "addCredits", ...}
+    - TxBody.create_identity(url, book_url, key_hash)  → {"type": "createIdentity", ...}
+
+For the same workflow done manually without convenience methods, see example_14.
 Uses Kermit public testnet endpoints.
 """
 
@@ -77,7 +94,11 @@ def test_features():
         # =========================================================
         print("--- Step 3: Add Credits to Lite Identity ---\n")
 
-        # Create SmartSigner for lite identity
+        # SmartSigner auto-queries the signer version from the network.
+        # Without SmartSigner, you would need to: query the key page version manually,
+        # binary-encode the signature metadata, compute the initiator hash, binary-encode
+        # the tx header and body, compute tx_hash and signing preimage, sign with Ed25519,
+        # and assemble the envelope JSON. See example_14 for this done manually.
         lite_signer = SmartSigner(client.v3, lite_kp, lid)
 
         # Get oracle price
@@ -90,6 +111,8 @@ def test_features():
         amount = (credits * 10000000000) // oracle
         print(f"Buying {credits} credits for {amount} ACME sub-units")
 
+        # TxBody.add_credits() returns {"type": "addCredits", "recipient": lid, "amount": ..., "oracle": ...}
+        # SmartSigner.sign_submit_and_wait() binary-encodes, hashes, signs, submits, and polls.
         add_credits_result = lite_signer.sign_submit_and_wait(
             principal=lta,
             body=TxBody.add_credits(lid, str(amount), oracle),
@@ -133,6 +156,7 @@ def test_features():
         print(f"Key Book URL: {book_url}")
         print(f"ADI Key Hash: {adi_key_hash_hex[:32]}...\n")
 
+        # TxBody.create_identity() returns {"type": "createIdentity", "url": ..., "keyBookUrl": ..., "keyHash": ...}
         create_adi_result = lite_signer.sign_submit_and_wait(
             principal=lta,
             body=TxBody.create_identity(identity_url, book_url, adi_key_hash_hex),
@@ -169,6 +193,7 @@ def test_features():
         key_page_amount = (key_page_credits * 10000000000) // oracle
         print(f"Buying {key_page_credits} credits for {key_page_amount} ACME sub-units")
 
+        # Same TxBody.add_credits() pattern, but funding the ADI key page instead of the lite identity.
         add_key_page_credits_result = lite_signer.sign_submit_and_wait(
             principal=lta,
             body=TxBody.add_credits(key_page_url, str(key_page_amount), oracle),

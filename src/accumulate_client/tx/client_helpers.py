@@ -8,7 +8,7 @@ using the builder pattern with AccumulateClient integration.
 from __future__ import annotations
 from typing import Any, Dict, Optional, Union
 
-from ..api_client import AccumulateClient
+from ..facade import Accumulate as AccumulateClient
 from ..runtime.url import AccountUrl
 from ..signers.signer import Signer
 from .execute import sign_and_submit, build_sign_submit

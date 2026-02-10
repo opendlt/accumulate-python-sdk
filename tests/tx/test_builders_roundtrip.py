@@ -26,12 +26,19 @@ def test_builder_registry_populated():
     assert len(BUILDER_REGISTRY) >= 30, f"Expected at least 30 builders, got {len(BUILDER_REGISTRY)}"
 
 
+# Builders registered under an alias name whose tx_type is the underlying protocol type
+ALIAS_BUILDERS = {
+    "CreateLiteDataAccount": "WriteDataTo",
+}
+
+
 @pytest.mark.parametrize("tx_type", list(BUILDER_REGISTRY.keys()))
 def test_builder_creation(tx_type):
     """Test that all registered builders can be created."""
     builder = get_builder_for(tx_type)
     assert builder is not None
-    assert builder.tx_type == tx_type
+    expected_tx_type = ALIAS_BUILDERS.get(tx_type, tx_type)
+    assert builder.tx_type == expected_tx_type
     assert hasattr(builder, 'to_body')
     assert hasattr(builder, 'validate')
     assert hasattr(builder, 'to_canonical_json')
@@ -221,7 +228,7 @@ def test_builder_envelope_creation():
 
         # Verify header fields
         header = envelope['header']
-        assert header['origin'] == origin_url
+        assert header['principal'] == origin_url
         assert 'timestamp' in header
 
         # Verify body

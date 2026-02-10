@@ -190,8 +190,7 @@ def mk_minimal_valid_body(tx_type: str) -> Dict[str, Any]:
             'keys': [b'\x02' * 32]
         },
         'UpdateKeyPage': {
-            'operation': 'add',
-            'key': b'\x03' * 32
+            'operation': [{'type': 'add', 'entry': {'keyHash': b'\x03' * 32}}]
         },
         'UpdateKey': {
             'newKeyHash': b'\x04' * 32
@@ -209,9 +208,12 @@ def mk_minimal_valid_body(tx_type: str) -> Dict[str, Any]:
             'keyBookUrl': mk_key_book_url()
         },
         'CreateLiteTokenAccount': {},
+        'CreateLiteDataAccount': {
+            'recipient': mk_data_url(),
+            'data': b'test data'
+        },
         'SendTokens': {
-            'to': mk_identity_url() + '/tokens',
-            'amount': 1000000
+            'to': [{'url': mk_identity_url() + '/tokens', 'amount': 1000000}]
         },
         'IssueTokens': {
             'recipient': mk_identity_url() + '/tokens',
@@ -238,18 +240,16 @@ def mk_minimal_valid_body(tx_type: str) -> Dict[str, Any]:
         'AddCredits': {
             'recipient': mk_identity_url(),
             'amount': 1000000,
-            'oracle': 0.05
+            'oracle': 5
         },
         'BurnCredits': {
             'amount': 1000
         },
         'TransferCredits': {
-            'to': mk_identity_url(),
-            'amount': 1000
+            'to': [{'url': mk_identity_url(), 'amount': 1000}]
         },
         'UpdateAccountAuth': {
-            'authority': mk_identity_url(),
-            'operations': ['UpdateKeyPage']
+            'operations': [{'type': 'addAuthority', 'authority': mk_identity_url()}]
         },
         'LockAccount': {
             'height': 1000
@@ -260,8 +260,7 @@ def mk_minimal_valid_body(tx_type: str) -> Dict[str, Any]:
 
         # System transactions
         'NetworkMaintenance': {
-            'operation': 'update',
-            'target': mk_identity_url()
+            'operations': [{'type': 'pendingTransactionGC'}]
         },
         'SystemGenesis': {
             'networkName': 'testnet',

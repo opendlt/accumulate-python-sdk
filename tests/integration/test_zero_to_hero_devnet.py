@@ -12,11 +12,17 @@ import requests
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from accumulate_client import AccumulateClient
-from examples.shared_helpers import load_env_config
+
+try:
+    from examples.shared_helpers import load_env_config
+except ImportError:
+    load_env_config = None
 
 
 def is_devnet_available():
     """Check if DevNet is available for testing"""
+    if load_env_config is None:
+        return False
     try:
         config = load_env_config()
         response = requests.post(

@@ -22,8 +22,8 @@ pip install accumulate-sdk-opendlt
 Or install from source:
 
 ```bash
-git clone https://github.com/opendlt/accumulate-python-sdk.git
-cd accumulate-python-sdk/unified
+git clone https://github.com/opendlt/accumulate-python-client.git
+cd accumulate-python-client/unified
 pip install -e ".[dev]"
 ```
 
@@ -52,32 +52,40 @@ account = client.query(lta)
 print(f"Account: {account}")
 ```
 
-## Smart Signing API
+## API Levels
 
-The `SmartSigner` class handles version tracking automatically:
+The SDK provides three levels of abstraction:
+
+| Level | Class | Best For |
+|-------|-------|----------|
+| Highest | `QuickStart` | Prototyping, scripts, learning |
+| Mid | `SmartSigner` + `TxBody` | Production apps with per-transaction control |
+| Lowest | Binary encoding helpers | Custom protocols, cross-language testing |
+
+### SmartSigner + TxBody (Recommended for most use cases)
+
+`SmartSigner` handles the full sign/submit/poll lifecycle. Under the hood it:
+1. Queries the signer version from the network
+2. Binary-encodes signature metadata, transaction header, and body
+3. Computes `tx_hash = SHA256(SHA256(header) + SHA256(body))`
+4. Computes and signs `preimage = SHA256(initiator + tx_hash)`
+5. Assembles the JSON envelope and submits via V3 JSON-RPC
+6. Polls until the transaction is delivered or fails
+
+`TxBody` is a static factory that returns correctly-structured body dicts.
 
 ```python
 from accumulate_client import Accumulate
 from accumulate_client.crypto.ed25519 import Ed25519KeyPair
 from accumulate_client.convenience import SmartSigner, TxBody
 
-# Connect to Kermit testnet
-client = Accumulate(
-    "https://kermit.accumulatenetwork.io/v2",
-    v3_endpoint="https://kermit.accumulatenetwork.io/v3",
-)
+client = Accumulate("https://kermit.accumulatenetwork.io")
 kp = Ed25519KeyPair.generate()
 lid = kp.derive_lite_identity_url()
 lta = kp.derive_lite_token_account_url("ACME")
 
-# Create SmartSigner - automatically queries and tracks signer version
-signer = SmartSigner(
-    client=client,
-    keypair=kp,
-    signer_url=f"{lid}/1",
-)
+signer = SmartSigner(client.v3, kp, lid)
 
-# Sign, submit, and wait for delivery in one call
 result = signer.sign_submit_and_wait(
     principal=lta,
     body=TxBody.send_tokens_single(
@@ -166,6 +174,7 @@ See [`examples/v3/`](examples/v3/) for complete working examples:
 | `example_11_multi_signature_types.py` | Ed25519, RCD1, BTC, ETH signatures |
 | `example_12_quickstart_demo.py` | Complete zero-to-hero workflow |
 | `example_13_adi_to_adi_transfer_with_header_options.py` | Memo, metadata, expire, hold_until |
+| `example_14_low_level_adi_creation.py` | Same as example_02 but with no convenience methods |
 
 Run any example:
 ```bash
@@ -177,8 +186,7 @@ python examples/v3/example_01_lite_identities.py
 ```
 src/accumulate_client/
 ├── facade.py          # Accumulate unified client (V2/V3)
-├── api_client.py      # Low-level API client
-├── convenience.py     # SmartSigner, TxBody, QuickStart, Wallet, ADI
+├── convenience.py     # SmartSigner, TxBody, QuickStart, binary encoding helpers
 ├── crypto/            # Key pair implementations (Ed25519, Secp256k1)
 ├── signers/           # Signature type classes (Ed25519, RCD1, BTC, ETH)
 ├── tx/                # Transaction builders and header options
@@ -186,7 +194,7 @@ src/accumulate_client/
 ├── enums.py           # Protocol enums (14 enums)
 └── runtime/           # URL handling, codecs, validation
 examples/
-└── v3/                # V3 API examples with SmartSigner (12 examples)
+└── v3/                # V3 API examples (13 examples, multiple API levels)
 tests/
 ├── unit/              # Unit tests
 ├── integration/       # Network integration tests
@@ -224,19 +232,19 @@ Enums=14, Types=103, Signatures=16, Transactions=33, API methods=35
 ## Error Handling
 
 ```python
-from accumulate_client.api_client import (
-    AccumulateAPIError,
-    AccumulateNetworkError,
-    AccumulateValidationError,
+from accumulate_client.runtime.errors import (
+    AccumulateError,
+    ValidationError,
+    NetworkError,
 )
 
 try:
     result = client.submit(envelope)
-except AccumulateValidationError as e:
+except ValidationError as e:
     print(f"Validation error: {e}")
-except AccumulateNetworkError as e:
+except NetworkError as e:
     print(f"Network error: {e}")
-except AccumulateAPIError as e:
+except AccumulateError as e:
     print(f"API error: {e.code} - {e}")
 ```
 

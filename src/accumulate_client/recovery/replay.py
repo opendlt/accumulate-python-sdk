@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional, Set, Callable
 from uuid import uuid4
 
 from ..tx import Transaction
-from ..api_client import AccumulateClient
+from ..facade import Accumulate as AccumulateClient
 
 
 logger = logging.getLogger(__name__)

@@ -8,6 +8,23 @@ This example demonstrates:
 - Funding accounts via faucet
 - Adding credits and sending tokens
 
+API Level: SmartSigner + TxBody (mid-level convenience)
+
+This example uses two convenience classes from accumulate_client.convenience:
+
+  SmartSigner — handles the entire sign/submit/poll lifecycle:
+    1. Queries signer version from the network
+    2. Binary-encodes signature metadata, tx header, and tx body
+    3. Computes tx_hash = SHA256(SHA256(header) + SHA256(body))
+    4. Computes and Ed25519-signs preimage = SHA256(initiator + tx_hash)
+    5. Assembles the JSON envelope and submits via V3 JSON-RPC
+    6. Polls until delivered or failed
+
+  TxBody — static factory that returns correctly-structured body dicts:
+    - TxBody.add_credits(recipient, amount, oracle) → {"type": "addCredits", ...}
+    - TxBody.send_tokens_single(to_url, amount)    → {"type": "sendTokens", "to": [...]}
+
+For the same workflow done manually without convenience methods, see example_14.
 Uses Kermit public testnet endpoints.
 """
 
@@ -82,7 +99,11 @@ def test_lite_identities():
         # =========================================================
         print("--- Step 3: Add Credits (using SmartSigner) ---\n")
 
-        # Create SmartSigner - auto-queries signer version!
+        # SmartSigner auto-queries the signer version from the network.
+        # Without SmartSigner, you would need to: query the key page version manually,
+        # binary-encode the signature metadata, compute the initiator hash, binary-encode
+        # the tx header and body, compute tx_hash and signing preimage, sign with Ed25519,
+        # and assemble the envelope JSON. SmartSigner does all of this for you.
         signer1 = SmartSigner(client.v3, kp1, lid1)
 
         # Get oracle price
@@ -95,8 +116,10 @@ def test_lite_identities():
         amount = (credits * 10000000000) // oracle
         print(f"Buying {credits} credits for {amount} ACME sub-units")
 
-        # Use SmartSigner to sign and submit - no manual version tracking!
-        # Set verbose=True to see full RPC request/response for debugging
+        # TxBody.add_credits() returns {"type": "addCredits", "recipient": ..., "amount": ..., "oracle": ...}
+        # SmartSigner.sign_submit_and_wait() binary-encodes this body, computes the tx hash,
+        # signs the preimage, submits, and polls for delivery — all in one call.
+        # Set verbose=True to see full RPC request/response for debugging.
         add_credits_result = signer1.sign_submit_and_wait(
             principal=lta1,
             body=TxBody.add_credits(lid1, str(amount), oracle),
@@ -129,6 +152,7 @@ def test_lite_identities():
         send_amount = 100000000  # 1 ACME (8 decimal places)
         print(f"Sending 1 ACME from {lta1} to {lta2}")
 
+        # TxBody.send_tokens_single() returns {"type": "sendTokens", "to": [{"url": ..., "amount": ...}]}
         send_result = signer1.sign_submit_and_wait(
             principal=lta1,
             body=TxBody.send_tokens_single(lta2, str(send_amount)),

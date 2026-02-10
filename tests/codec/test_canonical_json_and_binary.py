@@ -120,10 +120,9 @@ class TestTransactionBuilderRoundtrips:
             elif tx_type == "AddCredits":
                 builder.with_field("recipient", "acc://test.acme/book/1")
                 builder.with_field("amount", 1000000)
-                builder.with_field("oracle", 500.0)
+                builder.with_field("oracle", 500)
             elif tx_type == "UpdateKeyPage":
-                builder.with_field("operation", "add")
-                builder.with_field("key", "0123456789abcdef" * 4)
+                builder.with_field("operation", [{'type': 'add', 'entry': {'keyHash': b'\x03' * 32}}])
             elif tx_type == "CreateKeyBook":
                 builder.with_field("url", "acc://test.acme/book")
 

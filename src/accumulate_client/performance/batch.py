@@ -13,7 +13,6 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Callable, Union
 from uuid import uuid4
 
-from ..json_rpc_client import JsonRpcClient
 from .pool import HttpConnectionPool
 
 
@@ -165,10 +164,8 @@ class BatchClient:
         self._flush_callback: Optional[Callable] = None
         self._last_flush_time = time.time()
 
-        # HTTP client (fallback if no pool provided)
+        # No fallback HTTP client — pool is required for actual RPC calls
         self.http_client = None
-        if not pool:
-            self.http_client = JsonRpcClient(self.endpoint)
 
         logger.info(f"Initialized batch client: max_size={max_batch_size}, max_wait={max_wait_time}s")
 
@@ -468,12 +465,7 @@ class BatchClient:
             return
 
         try:
-            if self.pool:
-                # Use connection pool
-                result = await self._call_with_pool(request.method, request.params)
-            else:
-                # Use HTTP client
-                result = await self.http_client.call(request.method, request.params)
+            result = await self._call_with_pool(request.method, request.params)
 
             duration_ms = (time.time() - start_time) * 1000
             logger.debug(f"Request {request.method} completed in {duration_ms:.1f}ms")
@@ -501,12 +493,7 @@ class BatchClient:
             })
 
         try:
-            if self.pool:
-                # Use connection pool
-                responses = await self._batch_call_with_pool(batch_payload)
-            else:
-                # Use HTTP client batch call
-                responses = await self.http_client.batch_call(batch_payload)
+            responses = await self._batch_call_with_pool(batch_payload)
 
             duration_ms = (time.time() - start_time) * 1000
             logger.debug(f"Batch of {len(requests)} completed in {duration_ms:.1f}ms")

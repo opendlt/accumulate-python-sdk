@@ -24,9 +24,6 @@ except ImportError as e:
         ) from e
     raise
 
-from ..api_client import AccumulateClient
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -42,19 +39,29 @@ class StreamingAccumulateClient:
     - Snapshot-then-stream patterns
     """
 
-    def __init__(self, http_client: AccumulateClient, ws_config: Optional[WebSocketConfig] = None):
+    def __init__(self, http_client=None, ws_config: Optional[WebSocketConfig] = None, endpoint: Optional[str] = None):
         """
         Initialize streaming client.
 
         Args:
             http_client: HTTP client for snapshot queries
             ws_config: WebSocket configuration (auto-derived if None)
+            endpoint: Explicit endpoint URL (used to derive WebSocket URL if ws_config is None)
         """
         self.http_client = http_client
 
         # Auto-derive WebSocket config if not provided
         if ws_config is None:
-            ws_url = ws_url_from_http(http_client.config.endpoint)
+            ep = endpoint
+            if not ep:
+                _ep = getattr(http_client, 'endpoint', None)
+                if isinstance(_ep, str):
+                    ep = _ep
+            if not ep:
+                ep = getattr(getattr(http_client, 'config', None), 'endpoint', None)
+            if not ep:
+                raise ValueError("Must provide endpoint or http_client with .endpoint")
+            ws_url = ws_url_from_http(ep)
             ws_config = WebSocketConfig(url=ws_url)
 
         self.ws_client = WebSocketClient(ws_config)

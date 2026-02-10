@@ -307,15 +307,6 @@ def test_supported_signature_roundtrip(sig_name, sig_type):
         assert not verifier.verify(tampered_hash, raw_signature), f"ECDSASHA256 should reject tampered digest"
 
 
-@pytest.mark.parametrize("sig_name,sig_type", [
-    (name, value) for name, value in ALL_SIGNATURE_TYPES
-    if name not in SUPPORTED_TYPES and name != 'UNKNOWN'
-])
-def test_unsupported_signature_types(sig_name, sig_type):
-    """Mark unsupported signature types as expected failures."""
-    pytest.xfail(f"Signature type {sig_name} not yet implemented")
-
-
 def test_signature_determinism():
     """Test that signatures are deterministic for the same input."""
     private_key, _ = mk_ed25519_keypair(seed=54321)

@@ -15,7 +15,18 @@ from accumulate_client.runtime.url import AccountUrl
 from accumulate_client.signers.signer import Signer
 from accumulate_client.crypto.ed25519 import Ed25519PrivateKey
 from accumulate_client.enums import SignatureType
-from accumulate_client.api_client import AccumulateAPIError, AccumulateNetworkError, AccumulateValidationError
+# Test-only error shims (matching old api_client interface for MockTransport)
+class AccumulateAPIError(Exception):
+    def __init__(self, message, code=None, data=None):
+        super().__init__(message)
+        self.code = code
+        self.data = data
+
+class AccumulateNetworkError(AccumulateAPIError):
+    pass
+
+class AccumulateValidationError(AccumulateAPIError):
+    pass
 
 
 class MockSigner(Signer):
@@ -359,15 +370,29 @@ class MockClient:
 
     def submit_transaction(self, envelope: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Alternative submit method.
+        Alternative submit method with retry (mirrors real client behaviour).
 
         Args:
             envelope: Transaction envelope
 
         Returns:
-            Mock submission response
+            Mock submission response (unwrapped from JSON-RPC)
         """
-        return self.transport.make_request('submit', {'envelope': envelope})
+        max_retries = int(self.config.max_retries)
+        last_error = None
+        for attempt in range(max_retries + 1):
+            try:
+                response = self.transport.make_request('submit', {'envelope': envelope})
+                if isinstance(response, dict) and 'result' in response:
+                    return response['result']
+                return response
+            except AccumulateNetworkError as e:
+                last_error = e
+                if attempt < max_retries:
+                    time.sleep(0.01)  # minimal sleep for tests
+                    continue
+                raise
+        raise last_error  # pragma: no cover
 
     # Add other API methods as needed
     def status(self) -> Dict[str, Any]:

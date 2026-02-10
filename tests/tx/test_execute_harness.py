@@ -19,7 +19,7 @@ from helpers import (
 
 from accumulate_client.tx.execute import sign_and_submit, build_sign_submit, wait_for_completion, ExecuteError
 from accumulate_client.tx.builders import get_builder_for
-from accumulate_client.api_client import AccumulateNetworkError
+from accumulate_client.runtime.errors import NetworkError as AccumulateNetworkError
 
 
 def test_sign_and_submit_happy_path():
@@ -180,8 +180,7 @@ def test_build_sign_submit_with_kwargs():
             'SendTokens',
             signer,
             wait=False,
-            to=mk_identity_url('recipient.acme'),
-            amount=5000000,
+            to=[{'url': mk_identity_url('recipient.acme') + '/tokens', 'amount': 5000000}],
             memo='test transfer'
         )
 
@@ -258,10 +257,10 @@ def test_transaction_envelope_structure():
 
         # Verify header structure
         header = envelope['header']
-        assert 'origin' in header
+        assert 'principal' in header
         assert 'timestamp' in header
         assert header['memo'] == 'test memo'
-        assert header['signer_hint'] == 'test-hint'
+        assert header['signerHint'] == 'test-hint'
 
         # Verify body exists
         assert envelope['body'] is not None

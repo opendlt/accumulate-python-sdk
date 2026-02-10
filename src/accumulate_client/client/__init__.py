@@ -12,19 +12,6 @@ try:
 except Exception:
     StreamingAccumulateClient = None  # type: ignore
 
-# Also try to expose JsonRpcClient if present (module name may vary)
-JsonRpcClient = None  # type: ignore
-for _mod in (
-    ".client.json_rpc_client",
-    ".client.jsonrpc_client",
-    ".client.json_rpc",
-):
-    if JsonRpcClient is None:
-        try:
-            JsonRpcClient = __import__(__name__ + _mod, fromlist=["JsonRpcClient"]).JsonRpcClient  # type: ignore
-        except Exception:
-            pass
-
 # ---- Crypto: Ed25519 -------------------------------------------------------
 # Export Ed25519 types and shims if available
 Ed25519KeyPair = Ed25519PrivateKey = Ed25519PublicKey = None  # type: ignore
@@ -90,7 +77,6 @@ for _mod, _name in (
 __all__ = [
     name for name in [
         "StreamingAccumulateClient",
-        "JsonRpcClient",
         "Ed25519KeyPair",
         "Ed25519PrivateKey",
         "Ed25519PublicKey",

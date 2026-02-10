@@ -422,8 +422,8 @@ def validate_builder_fields(builder: Any) -> None:
 
     # UpdateKey validation
     elif tx_type == 'UpdateKey':
-        if 'newKey' not in fields:
-            issues.append("Required field 'newKey' is missing")
+        if 'newKeyHash' not in fields:
+            issues.append("Required field 'newKeyHash' is missing")
 
     # UpdateKeyPage validation
     elif tx_type == 'UpdateKeyPage':
