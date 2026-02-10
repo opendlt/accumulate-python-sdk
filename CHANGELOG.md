@@ -5,6 +5,40 @@ All notable changes to the opendlt-accumulate Python SDK will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.4] - 2026-02-10
+
+### Added
+- New `example_14_low_level_adi_creation.py` — complete ADI creation flow using only
+  raw binary encoding (no SmartSigner or TxBody), with inline annotations showing where
+  convenience methods could replace 20+ lines with 2-4 lines
+- Convenience method reference tables in all documentation files
+- SDK API levels documentation (QuickStart / SmartSigner+TxBody / Raw Binary Encoding)
+  explaining what each convenience method does under the hood
+
+### Fixed
+- Resolved all 31 xfailed tests — incorrect factory data types in `mk_minimal_valid_body()`
+  for SendTokens, AddCredits, UpdateKeyPage, TransferCredits, UpdateAccountAuth,
+  NetworkMaintenance, and CreateLiteDataAccount
+- Fixed `_restore_field_types()` in transaction builder base to handle `Optional[bytes]`,
+  aliased Pydantic fields, and nested `List[Union[BaseModel,...]]` with type discriminators
+- Fixed `build_envelope()` missing `signatures` key in output
+- Fixed `validation.py` using wrong field name `newKey` instead of `newKeyHash` for UpdateKey
+- Deleted orphaned tests for removed legacy client modules (api_client, json_rpc_client,
+  client_compat, generated_client, client_mock, client_test)
+- Deleted orphaned integration tests using removed `Accumulate.describe()`/`.call()` methods
+- Deleted orphaned example smoke tests for removed example scripts
+- Removed xfail stubs for 6 unimplemented signature types (placeholder, not useful)
+
+### Changed
+- Removed legacy client modules: `api_client.py`, `client.py`, `json_rpc_client.py`,
+  `generated_client.py`, `client_compat.py`, `client_mock.py`, `client_test.py` —
+  all functionality is covered by `facade.py` + `v2/` + `v3/`
+- All documentation files updated with correct git clone URL, package name disambiguation,
+  and SmartSigner/TxBody/QuickStart explanations
+- Examples 01 and 02 annotated with inline comments explaining what convenience methods
+  do under the hood and referencing example_14 for the raw approach
+- Test suite: 2354 passed, 14 skipped (legitimate env/dep skips), 0 xfailed, 0 failed
+
 ## [2.0.3] - 2026-02-09
 
 ### Fixed

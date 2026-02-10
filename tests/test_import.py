@@ -6,7 +6,7 @@ import pytest
 def test_main_import():
     """Test that the main package imports successfully."""
     import accumulate_client
-    assert accumulate_client.__version__ == "2.0.3"
+    assert accumulate_client.__version__ == "2.0.4"
     assert hasattr(accumulate_client, 'AccumulateClient')
     assert hasattr(accumulate_client, 'AccumulateV3Client')
 
