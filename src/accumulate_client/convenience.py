@@ -804,6 +804,58 @@ class TxBody:
             "url": url
         }
 
+    @staticmethod
+    def transfer_credits(to: str, amount: int) -> Dict[str, Any]:
+        """Create TransferCredits body."""
+        return {
+            "type": "transferCredits",
+            "to": [{"url": to, "amount": amount}]
+        }
+
+    @staticmethod
+    def burn_credits(amount: int) -> Dict[str, Any]:
+        """Create BurnCredits body."""
+        return {
+            "type": "burnCredits",
+            "amount": amount
+        }
+
+    @staticmethod
+    def update_key(new_key_hash: str) -> Dict[str, Any]:
+        """Create UpdateKey body for key rotation."""
+        return {
+            "type": "updateKey",
+            "newKeyHash": new_key_hash
+        }
+
+    @staticmethod
+    def lock_account(height: int) -> Dict[str, Any]:
+        """Create LockAccount body."""
+        return {
+            "type": "lockAccount",
+            "height": height
+        }
+
+    @staticmethod
+    def update_account_auth(operations: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Create UpdateAccountAuth body."""
+        return {
+            "type": "updateAccountAuth",
+            "operations": operations
+        }
+
+    @staticmethod
+    def write_data_to(recipient: str, entries_hex: List[str]) -> Dict[str, Any]:
+        """Create WriteDataTo body with hex-encoded entries."""
+        return {
+            "type": "writeDataTo",
+            "recipient": recipient,
+            "entry": {
+                "type": "doubleHash",
+                "data": entries_hex
+            }
+        }
+
 
 # =============================================================================
 # SmartSigner - High-level signer with auto-version tracking
