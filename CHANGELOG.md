@@ -5,6 +5,17 @@ All notable changes to the opendlt-accumulate Python SDK will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-02-27
+
+### Added
+- Binary encoding for lockAccount, burnCredits, transferCredits, updateAccountAuth, updateKey, and writeDataTo transaction types
+- `_encode_account_auth_operation` encoder for UpdateAccountAuth operations
+- WriteDataTo support in body hash computation
+
+### Fixed
+- Envelope format now wraps transaction in an array to match v3 API spec
+- `add_credits` and `burn_tokens` TxBody methods accept flexible amount types
+
 ## [2.0.4] - 2026-02-10
 
 ### Added
