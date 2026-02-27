@@ -130,7 +130,7 @@ def build_vote(
         sig_dict["vote"] = vote.name.lower()
 
     return {
-        "transaction": transaction,
+        "transaction": [transaction],
         "signatures": [sig_dict]
     }
 
@@ -444,7 +444,7 @@ class VoteCollector:
             Complete envelope with transaction and all signatures
         """
         return {
-            "transaction": self.transaction,
+            "transaction": [self.transaction],
             "signatures": self.signatures.copy()
         }
 

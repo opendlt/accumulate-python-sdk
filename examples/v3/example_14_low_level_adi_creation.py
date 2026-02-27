@@ -285,7 +285,7 @@ def sign_transaction(
         transaction["header"]["memo"] = memo
 
     envelope = {
-        "transaction": transaction,
+        "transaction": [transaction],
         "signatures": [{
             "type": "ed25519",
             "publicKey": public_key.hex(),

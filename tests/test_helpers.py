@@ -109,7 +109,7 @@ class MockClient:
     def execute(self, transaction: Any, signers: List[Any]) -> Dict[str, Any]:
         """Mock execute method."""
         envelope = {
-            "transaction": transaction,
+            "transaction": [transaction],
             "signatures": [s.to_accumulate_signature({}) for s in signers]
         }
         return self.submit(envelope)

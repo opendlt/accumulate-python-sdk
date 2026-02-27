@@ -400,7 +400,7 @@ class BuildContext(BaseModel):
         """
         transaction = self.build_envelope(body)
         return {
-            "transaction": transaction,
+            "transaction": [transaction],
             "signatures": [signature]
         }
 

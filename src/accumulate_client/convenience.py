@@ -178,16 +178,22 @@ def _data_entry_hash(entry: dict) -> bytes:
 
 def _compute_write_data_body_hash(body: dict) -> bytes:
     """
-    Compute WriteData body hash using the special GetHash() algorithm.
+    Compute WriteData/WriteDataTo body hash using the special GetHash() algorithm.
 
-    Instead of SHA256(MarshalBinary(body)), WriteData uses:
+    Instead of SHA256(MarshalBinary(body)), WriteData/WriteDataTo uses:
     1. Marshal body WITHOUT the entry field
     2. Compute entry.Hash() separately
     3. Return MerkleHash([SHA256(body_without_entry), entry_hash])
     """
-    # Step 1: Marshal body without entry - just the type field (and scratch/writeToState if set)
+    body_type = body.get("type", "writeData")
+    _TX_TYPE_MAP = {"writeData": 5, "writeDataTo": 6}
+    tx_type_val = _TX_TYPE_MAP.get(body_type, 5)
+
+    # Step 1: Marshal body without entry
     body_parts = bytearray()
-    body_parts += _field_uvarint(1, 5)  # TransactionType = writeData = 5
+    body_parts += _field_uvarint(1, tx_type_val)
+    if body_type == "writeDataTo" and body.get("recipient"):
+        body_parts += _field_string(2, body["recipient"])
     if body.get("scratch"):
         body_parts += _field_uvarint(3, 1)
     if body.get("writeToState"):
@@ -418,6 +424,59 @@ def _encode_tx_body(body: Dict[str, Any]) -> bytes:
             if op_bytes:
                 parts += _field_bytes(2, op_bytes)
 
+    elif body_type == "lockAccount":
+        # Go field order: Type(1), Height(2)
+        height = body.get("height", 0)
+        if isinstance(height, str):
+            height = int(height)
+        if height:
+            parts += _field_uvarint(2, height)
+
+    elif body_type == "burnCredits":
+        # Go field order: Type(1), Amount(2)
+        amount = body.get("amount", 0)
+        if isinstance(amount, str):
+            amount = int(amount)
+        if amount:
+            parts += _field_uvarint(2, amount)
+
+    elif body_type == "transferCredits":
+        # Go field order: Type(1), To(2) - list of CreditRecipient
+        for recipient in body.get("to", []):
+            r_parts = bytearray()
+            if recipient.get("url"):
+                r_parts += _field_string(1, recipient["url"])
+            amt = recipient.get("amount", 0)
+            if isinstance(amt, str):
+                amt = int(amt)
+            if amt:
+                r_parts += _field_uvarint(2, amt)
+            parts += _field_bytes(2, bytes(r_parts))
+
+    elif body_type == "updateAccountAuth":
+        # Go field order: Type(1), Operations(2) - list of AccountAuthOperation
+        for op in body.get("operations", []):
+            op_bytes = _encode_account_auth_operation(op)
+            if op_bytes:
+                parts += _field_bytes(2, op_bytes)
+
+    elif body_type == "updateKey":
+        # Go field order: Type(1), NewKeyHash(2, WriteBytes)
+        new_key_hash = body.get("newKeyHash") or body.get("newKey")
+        if new_key_hash:
+            if isinstance(new_key_hash, str):
+                new_key_hash = bytes.fromhex(new_key_hash)
+            parts += _field_bytes(2, new_key_hash)
+
+    elif body_type == "writeDataTo":
+        # Go field order: Type(1), Recipient(2), Entry(3)
+        if body.get("recipient"):
+            parts += _field_string(2, body["recipient"])
+        if body.get("entry"):
+            entry_bytes = _encode_data_entry(body["entry"])
+            if entry_bytes:
+                parts += _field_bytes(3, entry_bytes)
+
     return bytes(parts)
 
 
@@ -464,6 +523,21 @@ def _encode_key_page_operation(op: Dict[str, Any]) -> bytes:
 
     elif op_type == "setThreshold":
         parts += _field_uvarint(2, op.get("threshold", 1))
+
+    return bytes(parts)
+
+
+def _encode_account_auth_operation(op: Dict[str, Any]) -> bytes:
+    """Encode an account auth operation (for UpdateAccountAuth)."""
+    op_type = op.get("type", "").lower()
+    parts = bytearray()
+
+    _OP_TYPE_MAP = {"enable": 1, "disable": 2, "addauthority": 3, "removeauthority": 4}
+    type_val = _OP_TYPE_MAP.get(op_type, 0)
+    parts += _field_uvarint(1, type_val)
+
+    if op.get("authority"):
+        parts += _field_string(2, op["authority"])
 
     return bytes(parts)
 
@@ -549,7 +623,7 @@ def _compute_tx_hash_and_sign(
         transaction["header"]["memo"] = memo
 
     envelope = {
-        "transaction": transaction,
+        "transaction": [transaction],
         "signatures": [{
             "type": "ed25519",
             "publicKey": public_key_bytes.hex(),
@@ -642,12 +716,12 @@ class TxBody:
         }
 
     @staticmethod
-    def add_credits(recipient: str, amount: str, oracle: int) -> Dict[str, Any]:
+    def add_credits(recipient: str, amount, oracle: int) -> Dict[str, Any]:
         """Create AddCredits body."""
         return {
             "type": "addCredits",
             "recipient": recipient,
-            "amount": amount,
+            "amount": str(amount),
             "oracle": oracle
         }
 
@@ -740,11 +814,11 @@ class TxBody:
         }
 
     @staticmethod
-    def burn_tokens(amount: int) -> Dict[str, Any]:
+    def burn_tokens(amount) -> Dict[str, Any]:
         """Create BurnTokens body."""
         return {
             "type": "burnTokens",
-            "amount": amount
+            "amount": str(amount)
         }
 
     @staticmethod

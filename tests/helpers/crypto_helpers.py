@@ -189,7 +189,7 @@ def create_signature_envelope(
 
     # Create envelope
     envelope = {
-        "transaction": transaction,
+        "transaction": [transaction],
         "signatures": [
             {
                 "type": signature_type,

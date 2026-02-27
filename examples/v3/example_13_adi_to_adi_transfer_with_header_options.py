@@ -587,7 +587,7 @@ def sign_submit_and_wait_with_header_options(
 
         # Build envelope (V3 format)
         envelope = {
-            "transaction": transaction,
+            "transaction": [transaction],
             "signatures": [{
                 "type": "ed25519",
                 "publicKey": public_key_bytes.hex(),
