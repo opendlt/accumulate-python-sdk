@@ -198,6 +198,8 @@ def _compute_write_data_body_hash(body: dict) -> bytes:
         body_parts += _field_uvarint(3, 1)
     if body.get("writeToState"):
         body_parts += _field_uvarint(4, 1)
+    if body.get("scratchLifespan"):
+        body_parts += _field_uvarint(5, body["scratchLifespan"])
     body_without_entry = bytes(body_parts)
 
     # Step 2: Compute entry hash
@@ -367,6 +369,10 @@ def _encode_tx_body(body: Dict[str, Any]) -> bytes:
             parts += _field_bytes(2, entry_bytes)
         if body.get("scratch"):
             parts += _field_uvarint(3, 1)
+        if body.get("writeToState"):
+            parts += _field_uvarint(4, 1)
+        if body.get("scratchLifespan"):
+            parts += _field_uvarint(5, body["scratchLifespan"])
 
     elif body_type == "createToken":
         # Go field order: Type(1), Url(2), Symbol(4), Precision(5), Properties(6), SupplyLimit(7)
