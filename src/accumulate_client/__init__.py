@@ -130,11 +130,20 @@ from .convenience import (
 # Compatibility imports for tests
 from .compat import Ed25519KeyPair, TransactionCodec, dumps_canonical, sha256_bytes, sha256_hex
 
-__version__ = "2.1.1"
+# ACME amount helpers (1 ACME = 1e8 base units)
+from .amounts import Amount, ACME_BASE_UNITS, ACME_PRECISION
+
+# Single source of truth for the version (matches pyproject dynamic version)
+from ._version import __version__
 __all__ = [
     # Primary entry point (Phase 7)
     "Accumulate",
     "AccumulateClient",
+
+    # ACME amount helpers
+    "Amount",
+    "ACME_BASE_UNITS",
+    "ACME_PRECISION",
 
     # V2/V3 clients (Phase 7)
     "AccumulateV2Client",
