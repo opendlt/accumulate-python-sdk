@@ -723,7 +723,15 @@ class TxBody:
 
     @staticmethod
     def add_credits(recipient: str, amount, oracle: int) -> Dict[str, Any]:
-        """Create AddCredits body."""
+        """Create AddCredits body.
+
+        Args:
+            recipient: URL of the key page (or lite identity) to credit.
+            amount: ACME to spend, in base units as a string/int (1 ACME = 1e8
+                base units). Getting the 1e8 scaling wrong is the most common bug.
+            oracle: Current ACME/credits oracle price (integer) from the network
+                oracle query. Credits received depend on this price.
+        """
         return {
             "type": "addCredits",
             "recipient": recipient,
