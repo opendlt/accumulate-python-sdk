@@ -1,3 +1,6 @@
 include src/accumulate_client/py.typed
 include README.md
 include LICENSE
+include llms.txt
+include llms-full.txt
+include AGENTS.md
