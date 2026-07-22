@@ -55,6 +55,11 @@ Issues = "https://github.com/opendlt/accumulate-python-sdk/issues"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+# Ship the AI-agent interface files inside the wheel (not just the sdist), so
+# `pip install` carries llms.txt/llms-full.txt/AGENTS.md alongside the package.
+[tool.setuptools.data-files]
+"." = ["llms.txt", "llms-full.txt", "AGENTS.md"]
+
 [tool.setuptools.dynamic]
 version = { attr = "accumulate_client._version.__version__" }
 readme = { file = "README.md", content-type = "text/markdown" }
