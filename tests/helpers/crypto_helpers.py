@@ -33,7 +33,7 @@ def canonical_json(obj: Any) -> str:
         Canonical JSON string
     """
     # Import here to avoid circular imports
-    from src.accumulate_client.canonjson import dumps_canonical
+    from accumulate_client.canonjson import dumps_canonical
 
     return dumps_canonical(obj)
 
@@ -217,6 +217,13 @@ def verify_signature_envelope(envelope: Dict[str, Any]) -> bool:
 
     if not transaction or not signatures:
         return False
+
+    # An envelope stores `transaction` as an ARRAY, but the signature is made
+    # over the single transaction object (see create_signature_envelope).
+    # Hashing the list here produced a different digest, so verification could
+    # never succeed for an envelope this module had just created.
+    if isinstance(transaction, list):
+        transaction = transaction[0]
 
     # Hash the transaction
     tx_hash = create_transaction_hash(transaction)

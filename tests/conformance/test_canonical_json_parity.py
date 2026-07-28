@@ -15,8 +15,8 @@ import unittest
 
 # Import canonjson module
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-from src.accumulate_client.canonjson import dumps_canonical
-from src.accumulate_client.codec import sha256_bytes
+from accumulate_client.canonjson import dumps_canonical
+from accumulate_client.codec import sha256_bytes
 
 
 class TestCanonicalJsonParity(unittest.TestCase):

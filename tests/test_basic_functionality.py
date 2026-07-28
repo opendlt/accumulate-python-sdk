@@ -212,9 +212,10 @@ class TestClientConfiguration:
         testnet = testnet_client()
         local = local_client()
 
-        assert "accumulatenetwork.io" in mainnet.endpoint
-        assert "accumulatenetwork.io" in testnet.endpoint
-        assert "127.0.0.1" in local.endpoint or "localhost" in local.endpoint
+        # `endpoints` is a dict of network -> URL; there is no `.endpoint`.
+        assert "accumulatenetwork.io" in mainnet.endpoints["mainnet"]
+        assert "accumulatenetwork.io" in testnet.endpoints["testnet"]
+        assert "127.0.0.1" in local.endpoints["local"] or "localhost" in local.endpoints["local"]
 
     def test_client_method_existence(self):
         """Test that client has all required API methods."""

@@ -15,8 +15,8 @@ import unittest
 
 # Import modules
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-from src.accumulate_client import Ed25519KeyPair, TransactionCodec, dumps_canonical, sha256_bytes
-from src.accumulate_client.codec.hashes import (
+from accumulate_client import Ed25519KeyPair, TransactionCodec, dumps_canonical, sha256_bytes
+from accumulate_client.codec.hashes import (
     create_signing_preimage,
     hash_signature_metadata,
     hash_transaction,
@@ -463,7 +463,7 @@ class TestHashAndSigParity(unittest.TestCase):
                 signing_preimage = create_signing_preimage(metadata_hash, tx_hash)
 
                 # Verify signature
-                from src.accumulate_client.crypto.ed25519 import verify_ed25519
+                from accumulate_client.crypto.ed25519 import verify_ed25519
 
                 is_valid = verify_ed25519(public_key_bytes, signature_bytes, signing_preimage)
 

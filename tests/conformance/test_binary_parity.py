@@ -15,9 +15,9 @@ import unittest
 
 # Import codec modules
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-from src.accumulate_client.canonjson import dumps_canonical
-from src.accumulate_client.codec import BinaryReader, BinaryWriter, TransactionCodec, sha256_bytes
-from src.accumulate_client.codec.transaction_codec import AccumulateCodec
+from accumulate_client.canonjson import dumps_canonical
+from accumulate_client.codec import BinaryReader, BinaryWriter, TransactionCodec, sha256_bytes
+from accumulate_client.codec.transaction_codec import AccumulateCodec
 from tests.helpers.parity import assert_hex_equal
 
 

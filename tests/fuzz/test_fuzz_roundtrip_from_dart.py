@@ -15,8 +15,8 @@ import unittest
 
 # Import modules
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-from src.accumulate_client import dumps_canonical, sha256_bytes
-from src.accumulate_client.codec.hashes import hash_transaction
+from accumulate_client import dumps_canonical, sha256_bytes
+from accumulate_client.codec.hashes import hash_transaction
 
 
 class TestFuzzRoundtripFromDart(unittest.TestCase):

@@ -6,7 +6,10 @@ import pytest
 def test_main_import():
     """Test that the main package imports successfully."""
     import accumulate_client
-    assert accumulate_client.__version__ == "2.0.4"
+    # Assert the SHAPE, not a literal: a pinned version fails on every
+    # release (it was still asserting 2.0.4 at 2.3.0).
+    import re
+    assert re.fullmatch(r"\d+\.\d+\.\d+", accumulate_client.__version__),         f"unexpected version format: {accumulate_client.__version__}"
     assert hasattr(accumulate_client, 'AccumulateClient')
     assert hasattr(accumulate_client, 'AccumulateV3Client')
 

@@ -286,7 +286,9 @@ class TestTSParity(unittest.TestCase):
         # Verify envelope structure
         self.assertIn("transaction", envelope)
         self.assertIn("signatures", envelope)
-        self.assertEqual(envelope["transaction"], transaction)
+        # An Accumulate envelope carries an ARRAY of transactions, so the
+        # helper's `"transaction": [transaction]` is protocol-correct.
+        self.assertEqual(envelope["transaction"], [transaction])
 
         # Verify signature
         is_valid = verify_signature_envelope(envelope)
