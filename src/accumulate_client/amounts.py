@@ -47,6 +47,29 @@ class Amount:
         return cls(int(units))
 
     @classmethod
+    def token(cls, whole_tokens: "int | float | str | Decimal", precision: int) -> "Amount":
+        """Create from whole units of a **custom token** with the given precision.
+
+        Custom tokens declare their own precision when created; the wire format
+        is always base units. ``Amount.token(1000, 8)`` is 1000 whole tokens =
+        ``100000000000`` base units.
+
+        Without this helper the only options are hand-computing a power of ten
+        or passing a raw base-unit string, and both are routinely got wrong:
+        issuing ``1000`` against a precision-8 token mints ``0.00001`` tokens,
+        not 1000. The transaction succeeds either way, so the mistake is silent.
+
+        >>> Amount.token(1000, 8).to_wire()
+        '100000000000'
+        >>> Amount.token(100, 2).to_wire()
+        '10000'
+        >>> Amount.token(1000, 0).to_wire()
+        '1000'
+        """
+        scaled = Decimal(str(whole_tokens)) * (10 ** int(precision))
+        return cls(int(scaled.to_integral_value(rounding="ROUND_DOWN")))
+
+    @classmethod
     def credits(cls, credit_count: int, oracle_price: int) -> "Amount":
         """ACME base units needed to buy ``credit_count`` credits at ``oracle_price``.
 
@@ -69,6 +92,14 @@ class Amount:
     def to_acme(self) -> Decimal:
         """The amount expressed in whole ACME."""
         return Decimal(self._base_units) / ACME_BASE_UNITS
+
+    def to_token(self, precision: int) -> Decimal:
+        """The amount in whole units of a token with the given precision.
+
+        >>> Amount.base_units(100000000000).to_token(8)
+        Decimal('1000')
+        """
+        return Decimal(self._base_units) / (10 ** int(precision))
 
     def __str__(self) -> str:  # so it drops into str/int amount args transparently
         return self.to_wire()

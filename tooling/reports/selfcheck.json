@@ -1,0 +1,70 @@
+{
+  "timestamp": "2026-07-21T13:35:40",
+  "counts": {
+    "enums": 15,
+    "types": 115,
+    "signatures": 17,
+    "transactions": 34,
+    "api_methods": 18,
+    "builder_registry": 33
+  },
+  "import_checks": {},
+  "builder_tests": {},
+  "signature_tests": {},
+  "validation_tests": {},
+  "url_tests": {},
+  "phase3_checks": {},
+  "auto_repairs": [],
+  "failures": [
+    {
+      "check": "import_enums",
+      "message": "Expected 14 enums, got 15",
+      "details": null
+    },
+    {
+      "check": "import_api_methods",
+      "message": "Expected ~35 API methods, got 18",
+      "details": null
+    }
+  ],
+  "warnings": [],
+  "summary": {
+    "status": "WARN",
+    "total_checks": 6,
+    "passed_checks": 4,
+    "failed_checks": 2,
+    "success_rate": 66.66666666666666
+  },
+  "import": {
+    "import_enums": {
+      "passed": false,
+      "message": "Expected 14 enums, got 15",
+      "details": null
+    },
+    "import_types": {
+      "passed": true,
+      "message": "115 type items found (\u00b120 tolerance)",
+      "details": null
+    },
+    "import_signatures": {
+      "passed": true,
+      "message": "17 signature types found",
+      "details": null
+    },
+    "import_transactions": {
+      "passed": true,
+      "message": "34 transaction body classes found",
+      "details": null
+    },
+    "import_api_methods": {
+      "passed": false,
+      "message": "Expected ~35 API methods, got 18",
+      "details": null
+    },
+    "import_builder_registry": {
+      "passed": true,
+      "message": "33 builders registered",
+      "details": null
+    }
+  }
+}
