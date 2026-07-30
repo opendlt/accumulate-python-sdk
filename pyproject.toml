@@ -57,6 +57,11 @@ where = ["src"]
 
 # Ship the AI-agent interface files inside the wheel (not just the sdist), so
 # `pip install` carries llms.txt/llms-full.txt/AGENTS.md alongside the package.
+[project.scripts]
+# RB-04 structured CLI. Also runnable without a global shim as
+# `python -m accumulate_client.cli`, which is what the conformance suite drives.
+accumulate = "accumulate_client.cli:main"
+
 [tool.setuptools.data-files]
 "." = ["llms.txt", "llms-full.txt", "AGENTS.md"]
 
