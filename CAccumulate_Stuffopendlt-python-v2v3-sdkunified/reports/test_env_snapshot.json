@@ -1,0 +1,9 @@
+{
+  "python": "3.11.13 (main, Jul  1 2025, 05:28:08) [GCC 12.2.0]",
+  "devnet_reachable": false,
+  "cwd": "/workspaces/unified",
+  "env": {
+    "ACC_DEVNET_ENDPOINT": "",
+    "PYTHONPATH": ""
+  }
+}
