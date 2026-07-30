@@ -173,6 +173,35 @@ def error_payload(raw: str, code: Optional[str] = None) -> Dict[str, Any]:
     return payload
 
 
+
+def load_private_key(ns) -> str:
+    """Resolve the signing key from an EXPLICIT source only.
+
+    Never falls back to an ambient default: a CLI that quietly finds a key is a
+    CLI that signs something the caller did not intend. Keys are never accepted
+    as positional arguments either, so they stay out of shell history.
+    """
+    key_file = getattr(ns, "key_file", None)
+    key_env = getattr(ns, "key_env", None)
+    if key_file and key_env:
+        raise UsageError("pass only one of --key-file or --key-env")
+    if key_file:
+        try:
+            with open(key_file, "r", encoding="utf-8") as fh:
+                return fh.read().strip()
+        except OSError as e:
+            raise UsageError("could not read --key-file: " + str(e))
+    if key_env:
+        val = os.environ.get(key_env)
+        if not val:
+            raise UsageError("--key-env '" + str(key_env) + "' is not set or empty")
+        return val.strip()
+    raise UsageError(
+        "signing requires an explicit key source: --key-file <path> or --key-env <VAR>. "
+        "No ambient default key is ever used."
+    )
+
+
 # ---------------------------------------------------------------------------
 # Envelope emission
 # ---------------------------------------------------------------------------
@@ -255,11 +284,19 @@ VERBS: List[Dict[str, Any]] = [
      "flags": [{"name": "--amount", "type": "number", "required": True}]},
     {"name": "tx build", "summary": "Build an unsigned transaction body", "network": False, "signs": False,
      "args": [{"name": "op", "type": "string", "required": True}],
-     "flags": [{"name": "--param", "type": "key=value", "required": False, "repeatable": True}]},
-    {"name": "tx submit", "summary": "Submit a signed envelope", "network": True, "signs": True,
-     "args": [], "flags": [{"name": "--envelope", "type": "path", "required": True},
-                           {"name": "--key-file", "type": "path", "required": False},
-                           {"name": "--key-env", "type": "string", "required": False}]},
+     "flags": [{"name": "--param", "type": "key=value", "required": False, "repeatable": True},
+               {"name": "--out", "type": "path", "required": False}]},
+    {"name": "tx sign", "summary": "Sign a transaction body into a submittable envelope",
+     "network": True, "signs": True, "args": [],
+     "flags": [{"name": "--body", "type": "path", "required": True},
+               {"name": "--principal", "type": "string", "required": True},
+               {"name": "--signer", "type": "string", "required": True},
+               {"name": "--key-file", "type": "path", "required": False},
+               {"name": "--key-env", "type": "string", "required": False},
+               {"name": "--out", "type": "path", "required": False}]},
+    {"name": "tx submit", "summary": "Submit an ALREADY-SIGNED envelope (does not sign)",
+     "network": True, "signs": False,
+     "args": [], "flags": [{"name": "--envelope", "type": "path", "required": True}]},
     {"name": "tx wait", "summary": "Poll a transaction until it reaches a final state",
      "network": True, "signs": False, "args": [{"name": "txid", "type": "string", "required": True}],
      "flags": [{"name": "--timeout", "type": "integer", "required": False, "default": 60}]},
@@ -348,14 +385,51 @@ def run_verb(verb: str, ns: argparse.Namespace, em: Emitter) -> int:
         })
 
     if verb == "tx build":
-        params: Dict[str, str] = {}
+        params: Dict[str, Any] = {}
         for raw in (getattr(ns, "param", None) or []):
             if "=" not in raw:
                 raise UsageError(f"--param must be key=value, got '{raw}'")
             k, v = raw.split("=", 1)
-            params[k] = v
-        return em.ok({"op": ns.op, "params": params, "signed": False,
-                      "note": "unsigned body; sign and submit with `tx submit --envelope`"})
+            params[k] = v  # coerced below, per the builder signature
+
+        from . import TxBody
+
+        builder = None if ns.op.startswith("_") else getattr(TxBody, ns.op, None)
+        if builder is None or not callable(builder):
+            ops = sorted(m for m in dir(TxBody) if not m.startswith("_"))
+            raise UsageError(
+                "unknown transaction op '" + str(ns.op) + "' -- available: " + ", ".join(ops)
+            )
+        # argv is all strings. Coerce ONLY where the builder annotates an int:
+        # blanket-coercing every numeric-looking value turned send_tokens'
+        # `amount` (declared str) into a number and the node rejected the
+        # envelope with "cannot unmarshal number ... of type string".
+        import inspect as _inspect
+        try:
+            _sig = _inspect.signature(builder)
+            for _name, _p in _sig.parameters.items():
+                if _name in params and _p.annotation in (int, "int"):
+                    try:
+                        params[_name] = int(params[_name])
+                    except ValueError:
+                        raise UsageError("--param " + _name + " must be an integer")
+        except (TypeError, ValueError):
+            pass
+        try:
+            body = builder(**params)
+        except TypeError as e:
+            import inspect as _inspect
+            raise UsageError(
+                "bad parameters for '" + str(ns.op) + str(_inspect.signature(builder)) + "': " + str(e)
+            )
+
+        out_path = getattr(ns, "out", None)
+        if out_path:
+            with open(out_path, "w", encoding="utf-8") as fh:
+                json.dump(body, fh)
+        return em.ok({"op": ns.op, "params": params, "body": body, "signed": False,
+                      "out": out_path,
+                      "note": "unsigned body; sign it with `tx sign --body <file>`, then `tx submit`"})
 
     # ---- network-touching verbs ----
     client = resolve_client(ns.network)
@@ -431,13 +505,35 @@ def run_verb(verb: str, ns: argparse.Namespace, em: Emitter) -> int:
                 return em.ok({"network": ns.network, "endpoint": client.endpoint,
                               "reachable": True, "endpoints": info, "probeError": raw})
 
+        if verb == "tx sign":
+            # The ONLY verb that signs. Requires an explicit key source and never
+            # reads an ambient default.
+            private_hex = load_private_key(ns)
+            from .crypto.ed25519 import Ed25519KeyPair
+            from . import SmartSigner
+
+            with open(ns.body, "r", encoding="utf-8") as fh:
+                body = json.load(fh)
+            keypair = Ed25519KeyPair.from_private_hex(private_hex)
+            # Delegate to the SDK signer. Signing bytes are consensus-visible, and
+            # a second hand-rolled implementation is exactly how they drift.
+            envelope = SmartSigner(client, keypair, ns.signer).sign_and_build(ns.principal, body)
+            out_path = getattr(ns, "out", None)
+            if out_path:
+                with open(out_path, "w", encoding="utf-8") as fh:
+                    json.dump(envelope, fh)
+            return em.ok({"signed": True, "principal": ns.principal, "signer": ns.signer,
+                          "envelope": envelope, "out": out_path})
+
         if verb == "tx submit":
-            if not getattr(ns, "key_file", None) and not getattr(ns, "key_env", None):
-                raise UsageError("tx submit signs, so it requires --key-file or --key-env; "
-                                 "no ambient default key is ever used")
+            # Deliberately does NOT sign -- and no longer pretends to. It used to
+            # take --key-file/--key-env and never use them. Sign with `tx sign`.
             with open(ns.envelope, "r", encoding="utf-8") as fh:
                 envelope = json.load(fh)
-            return em.ok({"submitted": True, "result": client.execute_direct(envelope)})
+            # Use the same submit path the SDK signer uses (client.submit, V3).
+            # execute_direct is the V2 shape and rejects a sign_and_build envelope
+            # with a bare -32802 Validation Error.
+            return em.ok({"submitted": True, "result": client.submit(envelope)})
 
         raise UsageError(f"unknown verb '{verb}'")
     finally:
@@ -462,7 +558,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 # Verbs whose name is two words, so argv parsing knows to consume a second token.
-TWO_WORD = {"credits estimate", "tx build", "tx submit", "tx wait", "tx status",
+TWO_WORD = {"credits estimate", "tx build", "tx sign", "tx submit", "tx wait", "tx status",
             "keys generate", "net list", "net status"}
 GROUPS = {"credits", "tx", "keys", "net"}
 
