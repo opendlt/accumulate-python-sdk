@@ -62,3 +62,6 @@ tests/fuzz/_stats.json
 
 # pip / build scratch directories (version-prefixed)
 =*/
+
+# Artifact of running tests with a mangled Windows path inside a container
+CAccumulate_Stuff*/
