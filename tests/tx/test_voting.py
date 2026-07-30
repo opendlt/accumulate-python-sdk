@@ -249,7 +249,9 @@ class TestBuildVote:
         """Test transaction structure is correct."""
         envelope = build_vote(build_ctx, sample_body, mock_signer, VoteType.ACCEPT)
 
-        tx = envelope["transaction"]
+        # `transaction` is a LIST of transactions in an envelope, not a single dict.
+        assert isinstance(envelope["transaction"], list) and envelope["transaction"]
+        tx = envelope["transaction"][0]
         assert "header" in tx
         assert "body" in tx
         assert tx["header"]["principal"] == "acc://test.acme"
