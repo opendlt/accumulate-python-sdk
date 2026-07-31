@@ -1007,6 +1007,97 @@ class SmartSigner:
             self._cached_version = 1
         return self._cached_version
 
+    def sign_existing(self, envelope: Dict[str, Any]) -> Dict[str, Any]:
+        """Co-sign an EXISTING envelope, appending this signer's signature.
+
+        This is what a multi-signature (M-of-N) flow needs, and it is NOT the
+        same as calling ``sign_and_build`` twice. That method derives the
+        transaction's ``initiator`` from the FIRST signer's metadata and bakes it
+        into the header, so the transaction hash is a function of that signer.
+        Signing the same body again with a different key therefore produces a
+        *different transaction*, and neither one ever reaches the threshold.
+
+        A co-signer must instead sign a preimage over the EXISTING transaction
+        hash, using its own signature metadata::
+
+            preimage = SHA256(cosigner_sig_metadata_hash + existing_tx_hash)
+
+        The existing hash is recomputed from the envelope's own header — which
+        already carries the original initiator — so the transaction is untouched.
+
+        Args:
+            envelope: A previously signed envelope (from ``sign_and_build``).
+
+        Returns:
+            The same envelope with one more entry in ``signatures``.
+        """
+        transactions = envelope.get("transaction") or []
+        if not transactions:
+            raise ValueError("envelope has no `transaction` to co-sign")
+        transaction = transactions[0]
+        header = transaction.get("header") or {}
+        initiator_hex = header.get("initiator")
+        if not initiator_hex:
+            raise ValueError("envelope transaction header has no `initiator`")
+
+        signatures = envelope.get("signatures")
+        if signatures is None:
+            raise ValueError("envelope has no `signatures` array")
+
+        public_key_bytes = self.keypair.public_key_bytes()
+
+        # Refuse a duplicate: the same key signing twice does not advance the
+        # threshold, and the node rejects the envelope.
+        if any(sig.get("publicKey") == public_key_bytes.hex() for sig in signatures):
+            raise ValueError(
+                "this key has already signed the envelope; a threshold needs DISTINCT signers"
+            )
+
+        # Recompute the transaction hash from the EXISTING header (original
+        # initiator preserved) and body.
+        initiator = bytes.fromhex(initiator_hex)
+        header_binary = _encode_tx_header(
+            principal=header.get("principal"),
+            initiator=initiator,
+            memo=header.get("memo"),
+        )
+        body = transaction.get("body") or {}
+        header_hash = _sha256(header_binary)
+        if body.get("type", "") in ("writeData", "writeDataTo"):
+            body_hash = _compute_write_data_body_hash(body)
+        else:
+            body_hash = _sha256(_encode_tx_body(body))
+        tx_hash = _sha256(header_hash + body_hash)
+
+        # The co-signer's OWN metadata: its signer URL, version and timestamp.
+        # Deliberately not the transaction's initiator.
+        timestamp = int(time.time() * 1_000_000)
+        sig_metadata_binary = _encode_ed25519_sig_metadata(
+            public_key=public_key_bytes,
+            signer_url=self.signer_url,
+            signer_version=self.get_signer_version(),
+            timestamp=timestamp,
+        )
+        sig_metadata_hash = _sha256(sig_metadata_binary)
+
+        signing_preimage = _sha256(sig_metadata_hash + tx_hash)
+        if hasattr(self.keypair, "sign"):
+            signature = self.keypair.sign(signing_preimage)
+        else:
+            signature = self.keypair.private_key.sign(signing_preimage)
+
+        out = dict(envelope)
+        out["signatures"] = list(signatures) + [{
+            "type": "ed25519",
+            "publicKey": public_key_bytes.hex(),
+            "signature": signature.hex(),
+            "signer": self.signer_url,
+            "signerVersion": self.get_signer_version(),
+            "timestamp": timestamp,
+            "transactionHash": tx_hash.hex(),
+        }]
+        return out
+
     def sign_and_build(
         self,
         principal: str,

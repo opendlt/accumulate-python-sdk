@@ -286,10 +286,11 @@ VERBS: List[Dict[str, Any]] = [
      "args": [{"name": "op", "type": "string", "required": True}],
      "flags": [{"name": "--param", "type": "key=value", "required": False, "repeatable": True},
                {"name": "--out", "type": "path", "required": False}]},
-    {"name": "tx sign", "summary": "Sign a transaction body into a submittable envelope",
+    {"name": "tx sign", "summary": "Sign a body into an envelope, or co-sign an existing envelope (M-of-N)",
      "network": True, "signs": True, "args": [],
-     "flags": [{"name": "--body", "type": "path", "required": True},
-               {"name": "--principal", "type": "string", "required": True},
+     "flags": [{"name": "--body", "type": "path", "required": False},
+               {"name": "--envelope", "type": "path", "required": False},
+               {"name": "--principal", "type": "string", "required": False},
                {"name": "--signer", "type": "string", "required": True},
                {"name": "--key-file", "type": "path", "required": False},
                {"name": "--key-env", "type": "string", "required": False},
@@ -512,17 +513,39 @@ def run_verb(verb: str, ns: argparse.Namespace, em: Emitter) -> int:
             from .crypto.ed25519 import Ed25519KeyPair
             from . import SmartSigner
 
-            with open(ns.body, "r", encoding="utf-8") as fh:
-                body = json.load(fh)
+            body_path = getattr(ns, "body", None)
+            env_path = getattr(ns, "envelope", None)
+            if bool(body_path) == bool(env_path):
+                raise UsageError(
+                    "pass exactly one of --body (start a new transaction) or "
+                    "--envelope (co-sign an existing one for an M-of-N threshold)"
+                )
+
             keypair = Ed25519KeyPair.from_private_hex(private_hex)
             # Delegate to the SDK signer. Signing bytes are consensus-visible, and
             # a second hand-rolled implementation is exactly how they drift.
-            envelope = SmartSigner(client, keypair, ns.signer).sign_and_build(ns.principal, body)
+            signer = SmartSigner(client, keypair, ns.signer)
+
+            if env_path:
+                with open(env_path, "r", encoding="utf-8") as fh:
+                    existing = json.load(fh)
+                envelope = signer.sign_existing(existing)
+                cosigned = True
+            else:
+                if not getattr(ns, "principal", None):
+                    raise UsageError("--principal is required when signing a --body")
+                with open(body_path, "r", encoding="utf-8") as fh:
+                    body = json.load(fh)
+                envelope = signer.sign_and_build(ns.principal, body)
+                cosigned = False
+
             out_path = getattr(ns, "out", None)
             if out_path:
                 with open(out_path, "w", encoding="utf-8") as fh:
                     json.dump(envelope, fh)
-            return em.ok({"signed": True, "principal": ns.principal, "signer": ns.signer,
+            return em.ok({"signed": True, "cosigned": cosigned,
+                          "signatures": len(envelope.get("signatures") or []),
+                          "principal": getattr(ns, "principal", None), "signer": ns.signer,
                           "envelope": envelope, "out": out_path})
 
         if verb == "tx submit":
@@ -533,7 +556,22 @@ def run_verb(verb: str, ns: argparse.Namespace, em: Emitter) -> int:
             # Use the same submit path the SDK signer uses (client.submit, V3).
             # execute_direct is the V2 shape and rejects a sign_and_build envelope
             # with a bare -32802 Validation Error.
-            return em.ok({"submitted": True, "result": client.submit(envelope)})
+            result = client.submit(envelope)
+            # A response without an RPC error does NOT mean the transaction was
+            # accepted: V3 returns one status per message, and a rejected envelope
+            # shows up as `failed: true` inside them. Reporting that as success is
+            # the "submitted != delivered" trap that makes an agent believe a write
+            # landed when it never did.
+            failures = []
+            if isinstance(result, list):
+                for item in result:
+                    status = (item or {}).get("status") or {}
+                    if status.get("failed"):
+                        err = status.get("error") or {}
+                        failures.append(err.get("message") or status.get("code") or "unknown")
+            if failures:
+                return em.fail("; ".join(failures))
+            return em.ok({"submitted": True, "result": result})
 
         raise UsageError(f"unknown verb '{verb}'")
     finally:
