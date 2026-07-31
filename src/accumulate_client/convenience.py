@@ -86,6 +86,23 @@ def _field_string(field_num: int, val: str) -> bytes:
     return _field(field_num, _encode_uvarint(len(encoded)) + encoded)
 
 
+def _field_authorities(field_num: int, body: dict) -> bytes:
+    """Encode a body's `authorities` as a repeated URL field.
+
+    Each authority is written as its own occurrence of `field_num`. The field
+    number differs per transaction type and must match the protocol exactly:
+    sending authorities in the JSON body while omitting them here (or writing
+    them under the wrong number) makes the locally computed transaction hash
+    disagree with the node's, and the transaction is rejected as unsigned.
+    """
+    out = b""
+    for auth in body.get("authorities") or []:
+        url = auth if isinstance(auth, str) else (auth or {}).get("url", "")
+        if url:
+            out += _field_string(field_num, url)
+    return out
+
+
 def _field_hash(field_num: int, val: bytes) -> bytes:
     """Encode a 32-byte hash field (no length prefix)."""
     assert len(val) == 32, f"Hash must be 32 bytes, got {len(val)}"
@@ -351,12 +368,14 @@ def _encode_tx_body(body: Dict[str, Any]) -> bytes:
             parts += _field_bytes(3, kh)  # WriteBytes, not WriteHash
         if body.get("keyBookUrl"):
             parts += _field_string(4, body["keyBookUrl"])
+        parts += _field_authorities(6, body)
 
     elif body_type == "createTokenAccount":
         if body.get("url"):
             parts += _field_string(2, body["url"])
         if body.get("tokenUrl"):
             parts += _field_string(3, body["tokenUrl"])
+        parts += _field_authorities(7, body)
 
     elif body_type == "createDataAccount":
         if body.get("url"):
@@ -365,8 +384,7 @@ def _encode_tx_body(body: Dict[str, Any]) -> bytes:
         # entry. Omitting it here while sending it in the JSON body would make
         # the locally computed transaction hash disagree with the node's, and
         # the transaction would be rejected as unsigned.
-        for _auth in body.get("authorities") or []:
-            parts += _field_string(3, _auth if isinstance(_auth, str) else _auth.get("url", ""))
+        parts += _field_authorities(3, body)
 
     elif body_type == "writeData":
         entry = body.get("entry", {})
@@ -390,6 +408,7 @@ def _encode_tx_body(body: Dict[str, Any]) -> bytes:
             parts += _field_uvarint(5, body["precision"])
         if body.get("supplyLimit") is not None:
             parts += _field_bigint(7, body["supplyLimit"])
+        parts += _field_authorities(9, body)
 
     elif body_type == "issueTokens":
         # Go field order: Type(1), Recipient(2), Amount(3), To(4)
@@ -429,6 +448,7 @@ def _encode_tx_body(body: Dict[str, Any]) -> bytes:
             if isinstance(pkh, str):
                 pkh = bytes.fromhex(pkh)
             parts += _field_bytes(3, pkh)  # WriteBytes, not WriteHash
+        parts += _field_authorities(5, body)
 
     elif body_type == "updateKeyPage":
         for op in body.get("operation", []):
