@@ -12,10 +12,12 @@ The flow is: sign once to build an envelope, co-sign that envelope with each
 additional key, then submit ONCE. Submitting between signatures trips replay
 protection on the signature already on chain.
 
-This example builds a 2-of-3 key page and then raises its threshold to 3 -- a
-change that itself requires two signatures. It targets the multisig page
-because a page's own book is its authority; a transaction against a sub-account
-would be authorized by the ADI's DEFAULT book instead and would sit pending.
+This example builds a 2-of-3 key book and then creates a data account governed
+by it. That creation needs BOTH authorities to approve: the parent ADI's own
+book (it owns the namespace) and the multi-sig book being installed -- three
+signatures on one envelope. Note the first key signs twice, under two different
+pages: a signature is identified by (key, signer), so those are distinct and
+satisfy two separate authorities.
 """
 
 """
@@ -352,30 +354,34 @@ def main():
             print(f"UpdateKeyPage FAILED: {set_threshold_2_of_3_result.error}")
 
         # =========================================================
-        # Raise Threshold to 3 (2-of-3 signatures) (Action: CoSign — update_key_page under an M-of-N threshold)
+        # Create Data Account Governed by the Multi-Sig Book (Action: CoSign — create_data_account under an M-of-N threshold)
         # =========================================================
         # A threshold needs DISTINCT keys signing the SAME transaction. Signing the
         # body twice does not work: the first signature's metadata becomes the
         # transaction's `initiator` and is baked into the header, so a second
         # independent signature is over a different transaction hash and neither
         # copy reaches the threshold. Co-sign the existing envelope instead.
-        raise_threshold_to_3_2_of_3_signatures_body = TxBody.update_key_page([{"type":"setThreshold","threshold":3}])
-        raise_threshold_to_3_2_of_3_signatures_signer = SmartSigner(client.v3, generate_keys_signer_1_kp, f"{str(create_adi_url)}/multisig-book/1")
-        raise_threshold_to_3_2_of_3_signatures_envelope = raise_threshold_to_3_2_of_3_signatures_signer.sign_and_build(
-            principal=f"{str(create_adi_url)}/multisig-book/1",
-            body=raise_threshold_to_3_2_of_3_signatures_body,
+        create_data_account_governed_by_the_multi_sig_book_body = TxBody.create_data_account(url=f"{str(create_adi_url)}/ms-data", authorities=[f"{str(create_adi_url)}/multisig-book"])
+        create_data_account_governed_by_the_multi_sig_book_signer = SmartSigner(client.v3, generate_keys_signer_1_kp, f"{str(create_adi_url)}/book/1")
+        create_data_account_governed_by_the_multi_sig_book_envelope = create_data_account_governed_by_the_multi_sig_book_signer.sign_and_build(
+            principal=str(create_adi_url),
+            body=create_data_account_governed_by_the_multi_sig_book_body,
         )
         # Co-signer 0: appends a signature to the SAME transaction hash.
-        raise_threshold_to_3_2_of_3_signatures_envelope = SmartSigner(client.v3, generate_keys_signer_2_kp, f"{str(create_adi_url)}/multisig-book/1").sign_existing(
-            raise_threshold_to_3_2_of_3_signatures_envelope
+        create_data_account_governed_by_the_multi_sig_book_envelope = SmartSigner(client.v3, generate_keys_signer_1_kp, f"{str(create_adi_url)}/multisig-book/1").sign_existing(
+            create_data_account_governed_by_the_multi_sig_book_envelope
+        )
+        # Co-signer 1: appends a signature to the SAME transaction hash.
+        create_data_account_governed_by_the_multi_sig_book_envelope = SmartSigner(client.v3, generate_keys_signer_2_kp, f"{str(create_adi_url)}/multisig-book/1").sign_existing(
+            create_data_account_governed_by_the_multi_sig_book_envelope
         )
         # Submit only once every signature is collected: resubmitting a signature
         # that is already on chain trips replay protection.
-        raise_threshold_to_3_2_of_3_signatures_result = client.submit(raise_threshold_to_3_2_of_3_signatures_envelope)
-        raise_threshold_to_3_2_of_3_signatures_messages = raise_threshold_to_3_2_of_3_signatures_result if isinstance(raise_threshold_to_3_2_of_3_signatures_result, list) else [raise_threshold_to_3_2_of_3_signatures_result]
-        raise_threshold_to_3_2_of_3_signatures_failed = [
+        create_data_account_governed_by_the_multi_sig_book_result = client.submit(create_data_account_governed_by_the_multi_sig_book_envelope)
+        create_data_account_governed_by_the_multi_sig_book_messages = create_data_account_governed_by_the_multi_sig_book_result if isinstance(create_data_account_governed_by_the_multi_sig_book_result, list) else [create_data_account_governed_by_the_multi_sig_book_result]
+        create_data_account_governed_by_the_multi_sig_book_failed = [
             ((s.get("status") or {}).get("error") or {}).get("message", "unknown")
-            for s in raise_threshold_to_3_2_of_3_signatures_messages
+            for s in create_data_account_governed_by_the_multi_sig_book_messages
             if isinstance(s, dict) and (
                 (s.get("status") or {}).get("failed")
                 or ((s.get("status") or {}).get("error") is not None)
@@ -383,41 +389,41 @@ def main():
         ]
         # The transaction's own txID is the one whose principal is the target
         # account; the others belong to the signature messages.
-        raise_threshold_to_3_2_of_3_signatures_txid = next(
+        create_data_account_governed_by_the_multi_sig_book_txid = next(
             (
                 (s.get("status") or {}).get("txID", "")
-                for s in raise_threshold_to_3_2_of_3_signatures_messages
+                for s in create_data_account_governed_by_the_multi_sig_book_messages
                 if isinstance(s, dict) and (s.get("status") or {}).get("txID")
             ),
             "",
         )
-        if raise_threshold_to_3_2_of_3_signatures_failed:
-            print(f"CoSign update_key_page FAILED: {raise_threshold_to_3_2_of_3_signatures_failed}")
+        if create_data_account_governed_by_the_multi_sig_book_failed:
+            print(f"CoSign create_data_account FAILED: {create_data_account_governed_by_the_multi_sig_book_failed}")
         else:
             # Acceptance is not execution. A transaction that has not reached its
             # threshold is accepted with code "ok" and then sits pending, so the
             # only honest confirmation is the delivered status.
-            raise_threshold_to_3_2_of_3_signatures_status = "unknown"
+            create_data_account_governed_by_the_multi_sig_book_status = "unknown"
             for _ in range(30):
                 try:
-                    raise_threshold_to_3_2_of_3_signatures_q = client.query(raise_threshold_to_3_2_of_3_signatures_txid)
+                    create_data_account_governed_by_the_multi_sig_book_q = client.query(create_data_account_governed_by_the_multi_sig_book_txid)
                     # V3 reports status as a string; V2 as a dict with a flag.
-                    raise_threshold_to_3_2_of_3_signatures_raw = (raise_threshold_to_3_2_of_3_signatures_q or {}).get("status")
-                    raise_threshold_to_3_2_of_3_signatures_status = (
-                        raise_threshold_to_3_2_of_3_signatures_raw
-                        if isinstance(raise_threshold_to_3_2_of_3_signatures_raw, str)
-                        else ("delivered" if (raise_threshold_to_3_2_of_3_signatures_raw or {}).get("delivered") else "pending")
+                    create_data_account_governed_by_the_multi_sig_book_raw = (create_data_account_governed_by_the_multi_sig_book_q or {}).get("status")
+                    create_data_account_governed_by_the_multi_sig_book_status = (
+                        create_data_account_governed_by_the_multi_sig_book_raw
+                        if isinstance(create_data_account_governed_by_the_multi_sig_book_raw, str)
+                        else ("delivered" if (create_data_account_governed_by_the_multi_sig_book_raw or {}).get("delivered") else "pending")
                     )
-                    if raise_threshold_to_3_2_of_3_signatures_status not in ("pending", "unknown"):
+                    if create_data_account_governed_by_the_multi_sig_book_status not in ("pending", "unknown"):
                         break
                 except Exception:
                     pass
                 time.sleep(2)
-            if raise_threshold_to_3_2_of_3_signatures_status == "delivered":
-                print(f"CoSign update_key_page DELIVERED with 2 signature(s) - TxID: {raise_threshold_to_3_2_of_3_signatures_txid}")
-                tx_ids.append(("CoSign:update_key_page", raise_threshold_to_3_2_of_3_signatures_txid))
+            if create_data_account_governed_by_the_multi_sig_book_status == "delivered":
+                print(f"CoSign create_data_account DELIVERED with 3 signature(s) - TxID: {create_data_account_governed_by_the_multi_sig_book_txid}")
+                tx_ids.append(("CoSign:create_data_account", create_data_account_governed_by_the_multi_sig_book_txid))
             else:
-                print(f"CoSign update_key_page NOT DELIVERED (status={raise_threshold_to_3_2_of_3_signatures_status}) - TxID: {raise_threshold_to_3_2_of_3_signatures_txid}")
+                print(f"CoSign create_data_account NOT DELIVERED (status={create_data_account_governed_by_the_multi_sig_book_status}) - TxID: {create_data_account_governed_by_the_multi_sig_book_txid}")
 
 
         # =========================================================
