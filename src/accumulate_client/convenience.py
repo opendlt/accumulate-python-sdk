@@ -361,6 +361,12 @@ def _encode_tx_body(body: Dict[str, Any]) -> bytes:
     elif body_type == "createDataAccount":
         if body.get("url"):
             parts += _field_string(2, body["url"])
+        # Field 3 is repeated: each authority is written as its own field 3
+        # entry. Omitting it here while sending it in the JSON body would make
+        # the locally computed transaction hash disagree with the node's, and
+        # the transaction would be rejected as unsigned.
+        for _auth in body.get("authorities") or []:
+            parts += _field_string(3, _auth if isinstance(_auth, str) else _auth.get("url", ""))
 
     elif body_type == "writeData":
         entry = body.get("entry", {})
@@ -768,12 +774,26 @@ class TxBody:
         }
 
     @staticmethod
-    def create_data_account(url: str) -> Dict[str, Any]:
-        """Create CreateDataAccount body."""
-        return {
+    def create_data_account(
+        url: str,
+        authorities: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """Create CreateDataAccount body.
+
+        Args:
+            url: URL of the data account to create.
+            authorities: Key books that govern the new account. Defaults to the
+                parent ADI's own book. Pass a non-default book here to create an
+                account a multi-signature page can authorize directly — the
+                authority cannot be changed by re-creating the account later.
+        """
+        body: Dict[str, Any] = {
             "type": "createDataAccount",
             "url": url
         }
+        if authorities:
+            body["authorities"] = list(authorities)
+        return body
 
     @staticmethod
     def write_data(entries_hex: List[str], scratch: bool = False, write_to_state: bool = False) -> Dict[str, Any]:
@@ -1046,11 +1066,19 @@ class SmartSigner:
 
         public_key_bytes = self.keypair.public_key_bytes()
 
-        # Refuse a duplicate: the same key signing twice does not advance the
-        # threshold, and the node rejects the envelope.
-        if any(sig.get("publicKey") == public_key_bytes.hex() for sig in signatures):
+        # Refuse a duplicate: the same key signing twice as the SAME signer does
+        # not advance that page's threshold, and the node rejects the envelope.
+        # The signer URL is part of the identity: one key may legitimately sign
+        # as two different pages when a transaction needs several authorities to
+        # approve — creating an account governed by another book, for instance.
+        if any(
+            sig.get("publicKey") == public_key_bytes.hex()
+            and str(sig.get("signer") or "").rstrip("/") == str(self.signer_url).rstrip("/")
+            for sig in signatures
+        ):
             raise ValueError(
-                "this key has already signed the envelope; a threshold needs DISTINCT signers"
+                "this key has already signed the envelope as "
+                f"{self.signer_url}; a threshold needs DISTINCT signers"
             )
 
         # Recompute the transaction hash from the EXISTING header (original
