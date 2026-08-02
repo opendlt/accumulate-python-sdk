@@ -207,9 +207,17 @@ class Ed25519PrivateKey:
     @classmethod
     def from_seed(cls, seed: Union[str, bytes]) -> Ed25519PrivateKey:
         """
-        Derive private key from seed using SHA-256.
+        Derive private key by SHA-256 hashing an arbitrary seed.
 
-        For deterministic test keys.
+        This ALWAYS hashes, including a 32-byte input. An Ed25519 private key is
+        itself a 32-byte seed, so passing one here produces a DIFFERENT key --
+        the mismatch is invisible until the node rejects the signature with
+        "key does not belong to signer".
+
+        To use a private key you were GIVEN, use
+        :meth:`Ed25519KeyPair.from_private_hex` (hex) or
+        :meth:`Ed25519PrivateKey.from_bytes` (raw). Use this method only to
+        stretch a passphrase or other non-key material into a test key.
         """
         if isinstance(seed, str):
             seed = seed.encode('utf-8')
