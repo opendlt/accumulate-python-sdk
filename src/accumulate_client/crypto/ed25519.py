@@ -207,22 +207,33 @@ class Ed25519PrivateKey:
     @classmethod
     def from_seed(cls, seed: Union[str, bytes]) -> Ed25519PrivateKey:
         """
-        Derive private key by SHA-256 hashing an arbitrary seed.
+        Build a private key from a seed.
 
-        This ALWAYS hashes, including a 32-byte input. An Ed25519 private key is
-        itself a 32-byte seed, so passing one here produces a DIFFERENT key --
-        the mismatch is invisible until the node rejects the signature with
-        "key does not belong to signer".
+        A 32-byte input is used directly — that is exactly an Ed25519 seed, and
+        matches `keypair_from_seed` in the other SDKs, so the same bytes yield
+        the same identity everywhere. Any other input (a passphrase, say) is
+        stretched to 32 bytes with SHA-256.
 
-        To use a private key you were GIVEN, use
-        :meth:`Ed25519KeyPair.from_private_hex` (hex) or
-        :meth:`Ed25519PrivateKey.from_bytes` (raw). Use this method only to
-        stretch a passphrase or other non-key material into a test key.
+        Changed: this previously hashed even a 32-byte input, so a private key
+        passed here produced a different key than the one you were given.
         """
         if isinstance(seed, str):
             seed = seed.encode('utf-8')
 
-        # Use SHA-256 to derive 32-byte key from arbitrary seed
+        # A 32-byte input IS an Ed25519 seed — use it as-is.
+        #
+        # Hashing it unconditionally made this the only `from_seed` in the fleet
+        # that does not treat a seed as a seed: Rust's `keypair_from_seed` and
+        # every other SDK use the raw bytes, so the same 32 bytes produced a
+        # DIFFERENT identity in Python than everywhere else. Callers handed a
+        # private key got a key that was not theirs, and the mismatch only
+        # surfaced when the node rejected the signature with "key does not
+        # belong to signer".
+        #
+        # Anything else (a passphrase, a longer or shorter blob) is still
+        # stretched to 32 bytes with SHA-256.
+        if len(seed) == 32:
+            return cls(seed)
         key_bytes = hashlib.sha256(seed).digest()
         return cls(key_bytes)
 
