@@ -14,6 +14,10 @@ from .options import (
     QueryOptions,
     RangeOptions,
     ReceiptOptions,
+    # Proof service options
+    MajorHeaderRangeOptions,
+    MinorRootRangeOptions,
+    AnchorReceiptOptions,
     # Query types
     DefaultQuery,
     ChainQuery,
@@ -37,6 +41,7 @@ from .options import (
     SubscribeOptions,
 )
 
+from .receipt import Receipt
 from .client import AccumulateV3Client, V3ApiError
 
 __all__ = [
@@ -51,6 +56,11 @@ __all__ = [
     "QueryOptions",
     "RangeOptions",
     "ReceiptOptions",
+    "Receipt",
+    # Proof service options
+    "MajorHeaderRangeOptions",
+    "MinorRootRangeOptions",
+    "AnchorReceiptOptions",
     # Query types
     "DefaultQuery",
     "ChainQuery",

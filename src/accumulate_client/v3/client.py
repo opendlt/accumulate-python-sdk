@@ -28,6 +28,9 @@ from .options import (
     NetworkStatusOptions,
     MetricsOptions,
     RangeOptions,
+    MajorHeaderRangeOptions,
+    MinorRootRangeOptions,
+    AnchorReceiptOptions,
 )
 
 
@@ -651,6 +654,63 @@ class AccumulateV3Client:
             Network status
         """
         return self._call("network-status", options.to_dict())
+
+    # =========================================================================
+    # Proof Service (spine / anchor proofs)
+    # =========================================================================
+
+    def major_header_range(
+        self,
+        options: MajorHeaderRangeOptions
+    ) -> List[Dict[str, Any]]:
+        """
+        Get a record per major block in [start, end] (directory only).
+
+        Each record holds the major block's index entry, the quorum-signed
+        anchor of the minor block that closed it, and the network-account
+        updates of its window.
+
+        Args:
+            options: MajorHeaderRangeOptions (partition, start, end)
+
+        Returns:
+            List of MajorHeaderRecord dicts
+        """
+        return self._call("major-header-range", options.to_dict())
+
+    def minor_root_range(
+        self,
+        options: MinorRootRangeOptions
+    ) -> Dict[str, Any]:
+        """
+        Bind minor blocks past the spine to it (directory only).
+
+        Args:
+            options: MinorRootRangeOptions (partition, since, optional until)
+
+        Returns:
+            MinorRootRecord dict
+        """
+        return self._call("minor-root-range", options.to_dict())
+
+    def anchor_receipt(
+        self,
+        options: AnchorReceiptOptions
+    ) -> Dict[str, Any]:
+        """
+        Bind a partition's BPT root to a directory root.
+
+        This is the second call of a two-call account proof: the first
+        (a query with ``include_receipt``) returns a Receipt that is not
+        ``complete``; pass its ``partition`` and end hash here.
+
+        Args:
+            options: AnchorReceiptOptions (partition, bpt_root, optional at_or_after)
+
+        Returns:
+            AnchorReceiptRecord dict
+        """
+        return self._call("anchor-receipt", options.to_dict())
 
     # =========================================================================
     # Metrics Service

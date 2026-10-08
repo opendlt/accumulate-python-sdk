@@ -66,6 +66,70 @@ class ReceiptOptions(BaseModel):
 
 
 # =============================================================================
+# Proof Service Options (spine / anchor proofs)
+# =============================================================================
+
+class MajorHeaderRangeOptions(BaseModel):
+    """Options for ``major-header-range``: a record per major block in [start, end].
+
+    Only the directory partition serves this. Matches Go MajorHeaderRangeOptions.
+    """
+    partition: str = Field(..., description="Partition to serve; only the directory serves this")
+    start: int = Field(..., ge=0, description="First major block index")
+    end: int = Field(..., ge=0, description="Last major block index, inclusive")
+
+    model_config = {"populate_by_name": True}
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"partition": self.partition, "start": self.start, "end": self.end}
+
+
+class MinorRootRangeOptions(BaseModel):
+    """Options for ``minor-root-range``: binds minor blocks past the spine to it.
+
+    Only the directory serves this. Matches Go MinorRootRangeOptions.
+    """
+    partition: str = Field(..., description="Partition to serve; only the directory serves this")
+    since: int = Field(..., ge=0, description="The client's last verified minor block")
+    until: int = Field(default=0, ge=0, description="Target minor block, or 0 for as far as possible")
+
+    model_config = {"populate_by_name": True}
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"partition": self.partition, "since": self.since, "until": self.until}
+
+
+class AnchorReceiptOptions(BaseModel):
+    """Options for ``anchor-receipt``: bind a partition's BPT root to a directory root.
+
+    Matches Go AnchorReceiptOptions. ``bpt_root`` is where the first call's
+    receipt terminates (``Receipt.partition`` names the partition).
+    """
+    partition: str = Field(..., description="Partition whose BPT root is being bound")
+    bpt_root: Union[bytes, str] = Field(..., alias="bptRoot", description="Where the first call's receipt terminates (32 bytes)")
+    at_or_after: int = Field(
+        default=0, ge=0, alias="atOrAfter",
+        description="Ask for a receipt terminating at a directory root no older than this block; 0 returns the oldest that works"
+    )
+
+    model_config = {"populate_by_name": True}
+
+    @field_validator("bpt_root", mode="before")
+    @classmethod
+    def _coerce_root(cls, v: Any) -> bytes:
+        b = bytes.fromhex(v) if isinstance(v, str) else bytes(v)
+        if len(b) != 32:
+            raise ValueError(f"bptRoot must be 32 bytes, got {len(b)}")
+        return b
+
+    def to_dict(self) -> Dict[str, Any]:
+        result: Dict[str, Any] = {"partition": self.partition, "bptRoot": bytes(self.bpt_root).hex()}
+        if self.at_or_after:
+            result["atOrAfter"] = self.at_or_after
+        return result
+
+
+# =============================================================================
 # Submit/Validate/Faucet Options
 # =============================================================================
 
@@ -857,6 +921,10 @@ __all__ = [
     # Base options
     "RangeOptions",
     "ReceiptOptions",
+    # Proof service options
+    "MajorHeaderRangeOptions",
+    "MinorRootRangeOptions",
+    "AnchorReceiptOptions",
     # Submit/validate/faucet options
     "SubmitOptions",
     "ValidateOptions",
