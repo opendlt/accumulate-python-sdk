@@ -12,7 +12,8 @@ class ExecutorVersion(IntEnum):
     V2BAIKONUR = 6
     V2VANDENBERG = 7
     V2JIUQUAN = 8
-    VNEXT = 9
+    V2KOUROU = 9
+    VNEXT = 10
 
 class PartitionType(IntEnum):
     """Protocol enum: PartitionType"""
@@ -107,6 +108,7 @@ class TransactionType(IntEnum):
     TRANSFERCREDITS = 18
     UPDATEACCOUNTAUTH = 21
     UPDATEKEY = 22
+    RELEASELOCKEDOPERATION = 24
     NETWORKMAINTENANCE = 46
     ACTIVATEPROTOCOLVERSION = 47
     REMOTE = 48
@@ -116,6 +118,7 @@ class TransactionType(IntEnum):
     SYNTHETICDEPOSITCREDITS = 52
     SYNTHETICBURNTOKENS = 53
     SYNTHETICFORWARDTRANSACTION = 54
+    SYNTHETICLOCKEDDEPOSIT = 55
     SYSTEMGENESIS = 96
     DIRECTORYANCHOR = 97
     BLOCKVALIDATORANCHOR = 98
@@ -159,10 +162,17 @@ class VoteType(IntEnum):
     ABSTAIN = 2
     SUGGEST = 3
 
+class HashAlgorithm(IntEnum):
+    """Protocol enum: HashAlgorithm"""
+    UNKNOWN = 0
+    SHA256 = 1
+    SHA256D = 2
+    HASH160 = 3
+
 class BookType(IntEnum):
     """Protocol enum: BookType"""
     NORMAL = 0
     VALIDATOR = 1
     OPERATOR = 2
 
-__all__ = ["ExecutorVersion", "PartitionType", "DataEntryType", "ObjectType", "SignatureType", "KeyPageOperationType", "AccountAuthOperationType", "NetworkMaintenanceOperationType", "TransactionMax", "TransactionType", "AccountType", "AllowedTransactionBit", "VoteType", "BookType"]
+__all__ = ["ExecutorVersion", "PartitionType", "DataEntryType", "ObjectType", "SignatureType", "KeyPageOperationType", "AccountAuthOperationType", "NetworkMaintenanceOperationType", "TransactionMax", "TransactionType", "AccountType", "AllowedTransactionBit", "VoteType", "HashAlgorithm", "BookType"]

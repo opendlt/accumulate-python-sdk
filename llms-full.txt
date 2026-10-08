@@ -152,6 +152,15 @@ The node could not determine which partition should handle the request.
 - Python type: `ValidationError`
 - fix: Build the envelope through TxBody + SmartSigner rather than by hand. Every transaction needs a header with a valid `principal` — that URL is the routing key, and without it the node rejects the request before validating anything else.
 
+## Hash-locked transfers (HTLC, Accumulate 1.4.6.x) — library API only
+- Lock: `SmartSigner.sign_submit_and_wait(principal, TxBody.send_tokens_single(to, amount), hash_lock=HashLockOptions(hash_algorithm="sha256", hash=sha256(secret), expiration=...))`.
+  `hash_lock` also takes a dict `{hashAlgorithm, hash, expiration}`. The recipient gets a `SyntheticLockedDeposit` (type 0x37) instead of a normal deposit.
+- Release: the recipient submits `TxBody.release_locked_operation(locked_tx_id, preimage)` (type 0x18) before expiry; otherwise the tokens are refunded to the sender.
+- Node limits: hash is 32 bytes (SHA256, SHA256D) or 20 bytes (HASH160); expiration 10 minutes to 30 days ahead. `HashLockOptions.validate_for_submit()` checks these locally.
+- `hashLock` is TransactionHeader field 8, so it changes the transaction hash. Headers without it are byte-identical to before.
+- Not exposed by the `accumulate` CLI yet.
+- v3 proof methods: `AccumulateV3Client.major_header_range / minor_root_range / anchor_receipt`; `v3.Receipt` models `forHeight`, `complete`, `partition`, `startsAtMainState`.
+
 ## Operations (25)
 
 ### generate_keys  —  Generate Keys  [utility]

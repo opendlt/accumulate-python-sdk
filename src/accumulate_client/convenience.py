@@ -35,7 +35,7 @@ import time
 import asyncio
 from typing import Optional, Dict, Any, List, Union, Tuple, TYPE_CHECKING
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 
 if TYPE_CHECKING:
     from .v3.client import AccumulateV3Client
@@ -118,6 +118,100 @@ def _field_bigint(field_num: int, val: int) -> bytes:
         s = "0" + s
     bigint_bytes = bytes.fromhex(s)
     return _field_bytes(field_num, bigint_bytes)
+
+
+def _encode_varint(val: int) -> bytes:
+    """Encode a signed varint (zigzag, as Go's binary.PutVarint)."""
+    return _encode_uvarint(((val << 1) ^ (val >> 63)) & 0xFFFFFFFFFFFFFFFF)
+
+
+def _to_unix_seconds(val: Any) -> int:
+    """Accept a datetime, unix seconds (int), or an ISO-8601 string; return unix seconds (UTC)."""
+    if isinstance(val, bool):
+        raise ValueError("invalid time value")
+    if isinstance(val, int):
+        return val
+    if isinstance(val, str):
+        val = datetime.fromisoformat(val.replace("Z", "+00:00"))
+    if isinstance(val, datetime):
+        if val.tzinfo is None:
+            val = val.replace(tzinfo=timezone.utc)
+        return int(val.timestamp())
+    raise ValueError(f"unsupported time value: {val!r}")
+
+
+def _field_time(field_num: int, val: Any) -> bytes:
+    """Encode a time field (signed varint of UTC unix seconds)."""
+    return _field(field_num, _encode_varint(_to_unix_seconds(val)))
+
+
+def _field_bool(field_num: int, val: bool) -> bytes:
+    """Encode a bool field (uvarint 0/1)."""
+    return _field_uvarint(field_num, 1 if val else 0)
+
+
+_HASH_ALGORITHM_NAMES = ["unknown", "sha256", "sha256d", "hash160"]
+
+
+def _hash_algorithm_value(val: Any) -> int:
+    """Resolve a HashAlgorithm given as int, enum or name (sha256/sha256d/hash160)."""
+    if isinstance(val, str):
+        try:
+            return _HASH_ALGORITHM_NAMES.index(val.strip().lower())
+        except ValueError:
+            raise ValueError(f"unknown hash algorithm: {val!r}") from None
+    return int(val)
+
+
+def _to_bytes(val: Any) -> bytes:
+    """Accept bytes or a hex string."""
+    if isinstance(val, (bytes, bytearray)):
+        return bytes(val)
+    if isinstance(val, str):
+        return bytes.fromhex(val)
+    raise ValueError(f"expected bytes or hex string, got {type(val).__name__}")
+
+
+def _encode_hash_lock_options(opts: Dict[str, Any]) -> bytes:
+    """Binary-encode HashLockOptions: 1 HashAlgorithm(enum), 2 Hash(bytes), 3 Expiration(time)."""
+    parts = bytearray()
+    alg = _hash_algorithm_value(opts.get("hashAlgorithm", 0))
+    if alg:
+        parts += _field_uvarint(1, alg)
+    h = opts.get("hash")
+    if h:
+        parts += _field_bytes(2, _to_bytes(h))
+    if opts.get("expiration") is not None:
+        parts += _field_time(3, opts["expiration"])
+    return bytes(parts)
+
+
+def _hash_lock_dict(hash_lock: Any) -> Optional[Dict[str, Any]]:
+    """Accept a HashLockOptions model or a dict; return the dict form used by the encoders."""
+    if hash_lock is None:
+        return None
+    if isinstance(hash_lock, dict):
+        return hash_lock
+    return {
+        "hashAlgorithm": int(hash_lock.hash_algorithm),
+        "hash": hash_lock.hash,
+        "expiration": hash_lock.expiration,
+    }
+
+
+def _hash_lock_to_json(opts: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalize HashLock options to the JSON wire form the node accepts."""
+    out: Dict[str, Any] = {}
+    alg = _hash_algorithm_value(opts.get("hashAlgorithm", 0))
+    if alg:
+        out["hashAlgorithm"] = _HASH_ALGORITHM_NAMES[alg]
+    if opts.get("hash"):
+        out["hash"] = _to_bytes(opts["hash"]).hex()
+    if opts.get("expiration") is not None:
+        out["expiration"] = datetime.fromtimestamp(
+            _to_unix_seconds(opts["expiration"]), timezone.utc
+        ).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return out
 
 
 def _combine_hashes(a: bytes, b: bytes) -> bytes:
@@ -276,7 +370,11 @@ def _encode_tx_header(
     principal: str,
     initiator: bytes,
     memo: Optional[str] = None,
-    metadata: Optional[bytes] = None
+    metadata: Optional[bytes] = None,
+    expire: Optional[Dict[str, Any]] = None,
+    hold_until: Optional[Dict[str, Any]] = None,
+    authorities: Optional[List[Any]] = None,
+    hash_lock: Optional[Dict[str, Any]] = None,
 ) -> bytes:
     """
     Binary-encode transaction header.
@@ -288,7 +386,11 @@ def _encode_tx_header(
       Field 4: Metadata (bytes, optional)
       Field 5: Expire (optional)
       Field 6: HoldUntil (optional)
-      Field 7: Authorities (optional)
+      Field 7: Authorities (optional, repeated URL)
+      Field 8: HashLock (optional HashLockOptions)
+
+    Empty fields are omitted, so a header that does not use the optional
+    fields encodes exactly as before.
     """
     parts = bytearray()
 
@@ -307,9 +409,40 @@ def _encode_tx_header(
     if metadata:
         parts += _field_bytes(4, metadata)
 
-    # Fields 5-7: Expire, HoldUntil, Authorities - not implemented for basic use
+    # Field 5: Expire {AtTime}
+    if expire and expire.get("atTime") is not None:
+        parts += _field_bytes(5, _field_time(1, expire["atTime"]))
+
+    # Field 6: HoldUntil {MinorBlock}
+    if hold_until and hold_until.get("minorBlock"):
+        parts += _field_bytes(6, _field_uvarint(1, int(hold_until["minorBlock"])))
+
+    # Field 7: Authorities (repeated)
+    for auth in authorities or []:
+        url = auth if isinstance(auth, str) else (auth or {}).get("url", "")
+        if url:
+            parts += _field_string(7, url)
+
+    # Field 8: HashLock
+    if hash_lock:
+        parts += _field_bytes(8, _encode_hash_lock_options(hash_lock))
 
     return bytes(parts)
+
+
+def _encode_tx_header_from_json(header: Dict[str, Any], initiator: bytes) -> bytes:
+    """Binary-encode a transaction header given in its JSON (envelope) form."""
+    metadata = header.get("metadata")
+    return _encode_tx_header(
+        principal=header.get("principal"),
+        initiator=initiator,
+        memo=header.get("memo"),
+        metadata=_to_bytes(metadata) if metadata else None,
+        expire=header.get("expire"),
+        hold_until=header.get("holdUntil"),
+        authorities=header.get("authorities"),
+        hash_lock=header.get("hashLock"),
+    )
 
 
 def _encode_tx_body(body: Dict[str, Any]) -> bytes:
@@ -329,6 +462,7 @@ def _encode_tx_body(body: Dict[str, Any]) -> bytes:
         "createKeyPage": 12, "createKeyBook": 13, "addCredits": 14,
         "updateKeyPage": 15, "lockAccount": 16, "burnCredits": 17,
         "transferCredits": 18, "updateAccountAuth": 21, "updateKey": 22,
+        "releaseLockedOperation": 24, "syntheticLockedDeposit": 55,
     }
 
     tx_type_val = _TX_TYPE_MAP.get(body_type, 0)
@@ -500,6 +634,44 @@ def _encode_tx_body(body: Dict[str, Any]) -> bytes:
                 new_key_hash = bytes.fromhex(new_key_hash)
             parts += _field_bytes(2, new_key_hash)
 
+    elif body_type == "releaseLockedOperation":
+        # Go field order: Type(1), LockedTxID(2, txid string), Preimage(3, bytes)
+        if body.get("lockedTxID"):
+            parts += _field_string(2, str(body["lockedTxID"]))
+        if body.get("preimage"):
+            parts += _field_bytes(3, _to_bytes(body["preimage"]))
+
+    elif body_type == "syntheticLockedDeposit":
+        # Go field order: Type(1), SyntheticOrigin(2, nested), Token(3), Amount(4, bigint),
+        # Sender(5), HashAlgorithm(6), Hash(7), Expiration(8, time), IsIssuer(9).
+        # SyntheticOrigin: Cause(1, txid), Initiator(3, url), FeeRefund(4), Index(5).
+        origin = bytearray()
+        if body.get("cause"):
+            origin += _field_string(1, str(body["cause"]))
+        if body.get("initiator"):
+            origin += _field_string(3, body["initiator"])
+        if body.get("feeRefund"):
+            origin += _field_uvarint(4, int(body["feeRefund"]))
+        if body.get("index"):
+            origin += _field_uvarint(5, int(body["index"]))
+        parts += _field_bytes(2, bytes(origin))
+        if body.get("token"):
+            parts += _field_string(3, body["token"])
+        amount = int(body.get("amount", 0))
+        if amount > 0:
+            parts += _field_bigint(4, amount)
+        if body.get("sender"):
+            parts += _field_string(5, body["sender"])
+        alg = _hash_algorithm_value(body.get("hashAlgorithm", 0))
+        if alg:
+            parts += _field_uvarint(6, alg)
+        if body.get("hash"):
+            parts += _field_bytes(7, _to_bytes(body["hash"]))
+        if body.get("expiration") is not None:
+            parts += _field_time(8, body["expiration"])
+        if body.get("isIssuer"):
+            parts += _field_bool(9, True)
+
     elif body_type == "writeDataTo":
         # Go field order: Type(1), Recipient(2), Entry(3)
         if body.get("recipient"):
@@ -531,6 +703,19 @@ def _encode_data_entry(entry: Dict[str, Any]) -> bytes:
     return bytes(parts)
 
 
+def _encode_key_spec_params(entry: Dict[str, Any]) -> bytes:
+    """Encode a KeySpecParams: KeyHash(1, WriteBytes), Delegate(2, WriteUrl)."""
+    e_parts = bytearray()
+    if entry.get("keyHash"):
+        kh = entry["keyHash"]
+        if isinstance(kh, str):
+            kh = bytes.fromhex(kh)
+        e_parts += _field_bytes(1, kh)  # WriteBytes, not WriteHash
+    if entry.get("delegate"):
+        e_parts += _field_string(2, entry["delegate"])
+    return bytes(e_parts)
+
+
 def _encode_key_page_operation(op: Dict[str, Any]) -> bytes:
     """Encode a key page operation."""
     op_type = op.get("type", "")
@@ -540,18 +725,17 @@ def _encode_key_page_operation(op: Dict[str, Any]) -> bytes:
     type_val = _OP_TYPE_MAP.get(op_type, 0)
     parts += _field_uvarint(1, type_val)
 
-    if op_type in ("add", "remove", "update"):
-        # KeySpecParams: KeyHash(1, WriteBytes), Delegate(2, WriteUrl)
-        entry = op.get("entry", {})
-        e_parts = bytearray()
-        if entry.get("keyHash"):
-            kh = entry["keyHash"]
-            if isinstance(kh, str):
-                kh = bytes.fromhex(kh)
-            e_parts += _field_bytes(1, kh)  # WriteBytes, not WriteHash
-        if entry.get("delegate"):
-            e_parts += _field_string(2, entry["delegate"])
-        parts += _field_bytes(2, bytes(e_parts))
+    if op_type == "update":
+        # UpdateKeyOperation carries TWO KeySpecParams, matching Go's
+        # protocol.UpdateKeyOperation{Type(1), OldEntry(2), NewEntry(3)} —
+        # not the single Entry(2) that add/remove use. Encoding it through the
+        # add/remove path silently drops both key hashes and produces a 4-byte
+        # no-op, which on a single-key page would be an unrecoverable mistake.
+        parts += _field_bytes(2, _encode_key_spec_params(op.get("oldEntry", {})))
+        parts += _field_bytes(3, _encode_key_spec_params(op.get("newEntry", {})))
+
+    elif op_type in ("add", "remove"):
+        parts += _field_bytes(2, _encode_key_spec_params(op.get("entry", {})))
 
     elif op_type == "setThreshold":
         parts += _field_uvarint(2, op.get("threshold", 1))
@@ -581,7 +765,8 @@ def _compute_tx_hash_and_sign(
     signer_url: str,
     signer_version: int,
     memo: Optional[str] = None,
-    timestamp: Optional[int] = None
+    timestamp: Optional[int] = None,
+    hash_lock: Optional[Dict[str, Any]] = None
 ) -> Tuple[Dict[str, Any], int]:
     """
     Compute transaction hash and sign using proper binary encoding.
@@ -589,6 +774,8 @@ def _compute_tx_hash_and_sign(
     Returns:
         Tuple of (envelope_dict, timestamp_used)
     """
+    hash_lock = _hash_lock_dict(hash_lock)
+
     # Get public key
     if hasattr(keypair, 'public_key_bytes'):
         public_key_bytes = keypair.public_key_bytes()
@@ -616,7 +803,8 @@ def _compute_tx_hash_and_sign(
     header_binary = _encode_tx_header(
         principal=principal,
         initiator=initiator,
-        memo=memo
+        memo=memo,
+        hash_lock=hash_lock
     )
 
     # Step 4: Binary-encode transaction body
@@ -653,6 +841,8 @@ def _compute_tx_hash_and_sign(
     }
     if memo:
         transaction["header"]["memo"] = memo
+    if hash_lock:
+        transaction["header"]["hashLock"] = _hash_lock_to_json(hash_lock)
 
     envelope = {
         "transaction": [transaction],
@@ -745,6 +935,26 @@ class TxBody:
         return {
             "type": "sendTokens",
             "to": [{"url": r["url"], "amount": r["amount"]} for r in recipients]
+        }
+
+    @staticmethod
+    def release_locked_operation(locked_tx_id: str, preimage: Union[bytes, str]) -> Dict[str, Any]:
+        """Create ReleaseLockedOperation body (type 0x18).
+
+        Releases a SyntheticLockedDeposit created by a SendTokens that carried a
+        hash lock, by revealing the secret that hashes to the lock's hash. Submit
+        it from the recipient account that holds the locked deposit.
+
+        Args:
+            locked_tx_id: Transaction ID of the SyntheticLockedDeposit to release.
+            preimage: The secret (bytes or hex string).
+        """
+        if isinstance(preimage, (bytes, bytearray)):
+            preimage = bytes(preimage).hex()
+        return {
+            "type": "releaseLockedOperation",
+            "lockedTxID": locked_tx_id,
+            "preimage": preimage
         }
 
     @staticmethod
@@ -1104,11 +1314,7 @@ class SmartSigner:
         # Recompute the transaction hash from the EXISTING header (original
         # initiator preserved) and body.
         initiator = bytes.fromhex(initiator_hex)
-        header_binary = _encode_tx_header(
-            principal=header.get("principal"),
-            initiator=initiator,
-            memo=header.get("memo"),
-        )
+        header_binary = _encode_tx_header_from_json(header, initiator)
         body = transaction.get("body") or {}
         header_hash = _sha256(header_binary)
         if body.get("type", "") in ("writeData", "writeDataTo"):
@@ -1151,7 +1357,8 @@ class SmartSigner:
         principal: str,
         body: Dict[str, Any],
         memo: Optional[str] = None,
-        signer_version: Optional[int] = None
+        signer_version: Optional[int] = None,
+        hash_lock: Any = None
     ) -> Dict[str, Any]:
         """
         Sign a transaction and build the envelope.
@@ -1168,6 +1375,10 @@ class SmartSigner:
             body: Transaction body
             memo: Optional memo
             signer_version: Optional explicit version (auto-fetched if None)
+            hash_lock: Optional HTLC condition (HashLockOptions or dict with
+                hashAlgorithm / hash / expiration). With a SendTokens body the
+                recipient gets a SyntheticLockedDeposit that only a
+                ReleaseLockedOperation revealing the preimage can unlock.
 
         Returns:
             Complete transaction envelope ready for submission
@@ -1182,7 +1393,8 @@ class SmartSigner:
             body=body,
             signer_url=self.signer_url,
             signer_version=signer_version,
-            memo=memo
+            memo=memo,
+            hash_lock=hash_lock
         )
 
         return envelope
@@ -1194,7 +1406,8 @@ class SmartSigner:
         memo: Optional[str] = None,
         max_attempts: int = 30,
         poll_interval: float = 2.0,
-        verbose: bool = False
+        verbose: bool = False,
+        hash_lock: Any = None
     ) -> SubmitResult:
         """
         Sign, submit, and wait for transaction completion.
@@ -1212,7 +1425,7 @@ class SmartSigner:
         """
         try:
             # Build and sign envelope
-            envelope = self.sign_and_build(principal, body, memo)
+            envelope = self.sign_and_build(principal, body, memo, hash_lock=hash_lock)
 
             if verbose:
                 import json
@@ -1285,6 +1498,37 @@ class SmartSigner:
                         continue
 
                     status = tx_result.get("status", {})
+
+                    # The v3 API reports `status` as a code NAME ("delivered", "pending",
+                    # "unauthenticated", ...) beside a numeric `statusNo` and an `error` object.
+                    # Only the legacy shape was understood, so v3 transactions were never seen
+                    # as delivered OR as failed and the wait fell through to "assume success".
+                    if isinstance(status, str):
+                        node_error = tx_result.get("error")
+                        status_no = tx_result.get("statusNo")
+                        failed = bool(node_error) or (
+                            isinstance(status_no, int) and status_no >= 400
+                        )
+                        if failed:
+                            message = (
+                                node_error.get("message")
+                                if isinstance(node_error, dict) and node_error.get("message")
+                                else status
+                            )
+                            if verbose:
+                                print(f"\n[VERBOSE] Transaction rejected: {status} ({status_no}): {message}")
+                            return SubmitResult(
+                                success=False,
+                                txid=txid,
+                                error=f"Transaction failed: {message} ({status}, code {status_no})",
+                                response=tx_result
+                            )
+                        if status == "delivered":
+                            return SubmitResult(success=True, txid=txid, response=tx_result)
+                        # pending / remote / etc.: keep waiting
+                        time.sleep(poll_interval)
+                        continue
+
                     if isinstance(status, dict) and status.get("delivered", False):
                         # Check for execution error
                         if status.get("error"):
@@ -1307,10 +1551,16 @@ class SmartSigner:
 
                 time.sleep(poll_interval)
 
-            # Timeout - but transaction may still succeed
+            # Timeout: the transaction was submitted but never reported delivered. It may still
+            # be pending, so say so rather than claiming success; the caller has the txid to keep
+            # polling with.
             return SubmitResult(
-                success=True,  # Assume success if submitted
+                success=False,
                 txid=txid,
+                error=(
+                    f"Timed out after {max_attempts} attempts waiting for {txid} to be delivered; "
+                    "it may still be pending"
+                ),
                 response=response
             )
 

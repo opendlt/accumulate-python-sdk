@@ -180,6 +180,22 @@ class SyntheticDepositTokens(BaseModel):
     cause: bytes = Field(description="Causation hash")
     token: str = Field(description="Token URL")
 
+class ReleaseLockedOperation(BaseModel):
+    """Release a hash-locked deposit by revealing the preimage"""
+    lockedTxID: str = Field(description="ID of the SyntheticLockedDeposit to release")
+    preimage: bytes = Field(description="Secret that hashes to the locked hash")
+
+class SyntheticLockedDeposit(BaseModel):
+    """Synthetic deposit of tokens locked by a hash until the preimage is revealed"""
+    amount: int = Field(description="Amount locked")
+    cause: bytes = Field(description="Causation hash")
+    expiration: Optional[str] = Field(default=None, description="When the lock expires")
+    hash: bytes = Field(description="Hash that must be unlocked with the preimage")
+    hashAlgorithm: str = Field(description="sha256, sha256d or hash160")
+    isIssuer: bool = Field(default=False, description="Sender was the token issuer")
+    sender: str = Field(description="Original sender, refunded on expiration")
+    token: str = Field(description="Token URL")
+
 class SyntheticForwardTransaction(BaseModel):
     """Synthetic forward transaction"""
     cause: bytes = Field(description="Causation hash")

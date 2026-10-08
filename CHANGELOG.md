@@ -1,5 +1,37 @@
 # Changelog
 
+## [2.5.0] - 2026-10-08
+
+### Added
+- **Accumulate 1.4.6.x protocol support.**
+  - `ExecutorVersion.V2KOUROU = 9` (`v2-kourou`; runs on Kermit, destined for mainnet). `VNEXT`
+    moves from 9 to 10 to match the protocol. Previously a node reporting Kourou decoded as
+    `VNEXT` (numeric) or failed to parse (name).
+  - **Hash-locked transfers (HTLC).** `TransactionHeader.hashLock` (header field 8,
+    `HashLockOptions`), `HashAlgorithm`, transaction types `ReleaseLockedOperation` (0x18) and
+    `SyntheticLockedDeposit` (0x37), `TxBody.release_locked_operation`, and a `hash_lock=`
+    argument on `SmartSigner.sign_and_build` / `sign_submit_and_wait`.
+  - v3: `Receipt` model (`forHeight`, `complete`, `partition`, `startsAtMainState`), and client
+    methods `major_header_range`, `minor_root_range`, `anchor_receipt` with their options types.
+  - `NetworkGlobals.block_interval`.
+- `tests/test_htlc_golden_vectors.py` checks header, HashLock, body and transaction-hash bytes
+  against vectors produced by Go's own marshaler (accumulate e1d1db9, 1.4.6.7).
+
+### Fixed
+- **`SmartSigner.sign_submit_and_wait` could report a rejected transaction as a success.** The v3 API
+  reports `status` as a code name (`"delivered"`, `"unauthenticated"`, ...) beside `statusNo` and an
+  `error` object, but only a dict-shaped `status` was understood, so a transaction was never seen as
+  delivered or as failed and the wait fell through to "assume success". Found against Kermit, where a
+  `ReleaseLockedOperation` with the wrong preimage came back `success=True`. Delivery and failure are now
+  read from either shape and the node's message is returned (`Transaction failed: preimage does not match
+  hash (unauthenticated, code 401)`). A wait that times out is now `success=False` with the txid, instead
+  of an assumed success. Waits also finish as soon as the transaction is delivered rather than at the
+  timeout.
+- The binary header encoder in `convenience.py` omitted `Expire` (5), `HoldUntil` (6) and
+  `Authorities` (7); it now writes them exactly as Go does. Headers that don't use them encode
+  identically to before. `SmartSigner.sign_existing` re-encodes the header from the envelope,
+  so a co-signed transaction keeps these fields (and `hashLock`) in its hash.
+
 ## [2.3.4] - 2026-07-31
 
 ### Added

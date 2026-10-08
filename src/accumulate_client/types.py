@@ -191,6 +191,7 @@ class NetworkGlobals(BaseModel):
     anchor_empty_blocks: bool  # bool
     fee_schedule: FeeSchedule  # *FeeSchedule
     limits: NetworkLimits  # *NetworkLimits
+    block_interval: Any | None = None  # duration {seconds, nanoseconds} (also accepts seconds or a Go duration string); block cadence (1.4.6.5+)
 
 class FeeSchedule(BaseModel):
     """Protocol type: FeeSchedule"""
@@ -357,6 +358,7 @@ class TransactionHeader(BaseModel):
     expire: ExpireOptions | None = None  # *ExpireOptions
     hold_until: HoldUntilOptions | None = None  # *HoldUntilOptions
     authorities: List[AccountUrl] | None = None  # []*url
+    hash_lock: HashLockOptions | None = None  # *HashLockOptions (field 8, 1.4.6.x)
 
 class Transaction(BaseModel):
     """Protocol type: Transaction"""
@@ -373,6 +375,12 @@ class HoldUntilOptions(BaseModel):
 class ExpireOptions(BaseModel):
     """Protocol type: ExpireOptions"""
     at_time: datetime | None = None  # *time
+
+class HashLockOptions(BaseModel):
+    """Protocol type: HashLockOptions"""
+    hash_algorithm: int = 0  # HashAlgorithm (1 SHA256, 2 SHA256D, 3 HASH160)
+    hash: bytes = b""  # bytes
+    expiration: datetime | None = None  # *time
 
 class TransactionStatus(BaseModel):
     """Protocol type: TransactionStatus"""
@@ -722,4 +730,4 @@ class AddCreditsTransaction(BaseModel):
     oracle: Optional[int] = None
 
 
-__all__ = ["UnknownAccount", "UnknownSigner", "LiteIdentity", "LiteTokenAccount", "LiteDataAccount", "ADI", "TokenAccount", "KeyBook", "KeyPage", "DataAccount", "TokenIssuer", "Object", "ChainMetadata", "BlockEntry", "AccountAuth", "AuthorityEntry", "AnchorMetadata", "AcmeOracle", "IndexEntry", "AccumulateDataEntry", "DoubleHashDataEntry", "FactomDataEntryWrapper", "FactomDataEntry", "TxIdSet", "TokenRecipient", "CreditRecipient", "ChainParams", "KeySpecParams", "KeySpec", "NetworkGlobals", "FeeSchedule", "NetworkLimits", "Rational", "NetworkDefinition", "PartitionInfo", "ValidatorInfo", "ValidatorPartitionInfo", "RoutingTable", "Route", "RouteOverride", "TokenIssuerProof", "AnnotatedReceipt", "MetricsRequest", "MetricsResponse", "TransactionResultSet", "SyntheticOrigin", "SystemLedger", "SyntheticLedger", "AnchorLedger", "BlockLedger", "NetworkAccountUpdate", "PartitionAnchor", "PartitionAnchorReceipt", "PartitionSyntheticLedger", "PartitionExecutorVersion", "TransactionHeader", "Transaction", "HoldUntilOptions", "ExpireOptions", "TransactionStatus", "ChainQueryResponse", "TransactionQueryResponse", "SignatureBook", "SignaturePage", "SignerMetadata", "MinorBlock", "MinorQueryResponse", "MajorQueryResponse", "MerkleState", "MultiResponse", "KeyPage", "Signer", "TokenSend", "TokenDeposit", "UrlQuery", "KeyPageIndexQuery", "TxHistoryQuery", "QueryPagination", "MinorBlocksQuery", "QueryOptions", "TxnQuery", "ChainIdQuery", "MetricsQuery", "MetricsResponse", "ExecuteRequest", "TxRequest", "TxResponse", "DataEntryQuery", "DataEntryQueryResponse", "ChainEntry", "StatusResponse", "VersionResponse", "DescriptionResponse", "SyntheticTransactionRequest", "NetworkDescription", "PartitionDescription", "NodeDescription", "ResponseKeyPageIndex", "GeneralReceipt", "TxReceipt", "ResponseDataEntry", "ResponseDataEntrySet", "ChainState", "CreateIdentityTransaction", "CreateTokenAccountTransaction", "SendTokensTransaction", "WriteDataTransaction", "AddCreditsTransaction"]
+__all__ = ["UnknownAccount", "UnknownSigner", "LiteIdentity", "LiteTokenAccount", "LiteDataAccount", "ADI", "TokenAccount", "KeyBook", "KeyPage", "DataAccount", "TokenIssuer", "Object", "ChainMetadata", "BlockEntry", "AccountAuth", "AuthorityEntry", "AnchorMetadata", "AcmeOracle", "IndexEntry", "AccumulateDataEntry", "DoubleHashDataEntry", "FactomDataEntryWrapper", "FactomDataEntry", "TxIdSet", "TokenRecipient", "CreditRecipient", "ChainParams", "KeySpecParams", "KeySpec", "NetworkGlobals", "FeeSchedule", "NetworkLimits", "Rational", "NetworkDefinition", "PartitionInfo", "ValidatorInfo", "ValidatorPartitionInfo", "RoutingTable", "Route", "RouteOverride", "TokenIssuerProof", "AnnotatedReceipt", "MetricsRequest", "MetricsResponse", "TransactionResultSet", "SyntheticOrigin", "SystemLedger", "SyntheticLedger", "AnchorLedger", "BlockLedger", "NetworkAccountUpdate", "PartitionAnchor", "PartitionAnchorReceipt", "PartitionSyntheticLedger", "PartitionExecutorVersion", "TransactionHeader", "Transaction", "HoldUntilOptions", "ExpireOptions", "HashLockOptions", "TransactionStatus", "ChainQueryResponse", "TransactionQueryResponse", "SignatureBook", "SignaturePage", "SignerMetadata", "MinorBlock", "MinorQueryResponse", "MajorQueryResponse", "MerkleState", "MultiResponse", "KeyPage", "Signer", "TokenSend", "TokenDeposit", "UrlQuery", "KeyPageIndexQuery", "TxHistoryQuery", "QueryPagination", "MinorBlocksQuery", "QueryOptions", "TxnQuery", "ChainIdQuery", "MetricsQuery", "MetricsResponse", "ExecuteRequest", "TxRequest", "TxResponse", "DataEntryQuery", "DataEntryQueryResponse", "ChainEntry", "StatusResponse", "VersionResponse", "DescriptionResponse", "SyntheticTransactionRequest", "NetworkDescription", "PartitionDescription", "NodeDescription", "ResponseKeyPageIndex", "GeneralReceipt", "TxReceipt", "ResponseDataEntry", "ResponseDataEntrySet", "ChainState", "CreateIdentityTransaction", "CreateTokenAccountTransaction", "SendTokensTransaction", "WriteDataTransaction", "AddCreditsTransaction"]

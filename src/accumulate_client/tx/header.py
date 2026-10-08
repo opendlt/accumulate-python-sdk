@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from ..runtime.url import AccountUrl
+from ..enums import HashAlgorithm
 
 
 class ExpireOptions(BaseModel):
@@ -196,6 +197,85 @@ class HoldUntilOptions(BaseModel):
         return self.minor_block is not None
 
 
+class HashLockOptions(BaseModel):
+    """
+    Hash-lock (HTLC) condition on a transaction header.
+
+    Matches Go type: protocol.HashLockOptions (1.4.6.x)
+
+        type HashLockOptions struct {
+            HashAlgorithm HashAlgorithm `json:"hashAlgorithm,omitempty"`  // field 1
+            Hash          []byte        `json:"hash,omitempty"`           // field 2
+            Expiration    *time.Time    `json:"expiration,omitempty"`     // field 3
+        }
+
+    On a SendTokens, the recipient receives a SyntheticLockedDeposit that is
+    only released by a ReleaseLockedOperation revealing a preimage that hashes
+    to ``hash``; if ``expiration`` passes first, the tokens are refunded.
+    """
+    hash_algorithm: HashAlgorithm = Field(
+        default=HashAlgorithm.SHA256,
+        alias="hashAlgorithm",
+        description="Hash algorithm: SHA256 and SHA256D (32-byte hash) or HASH160 (20-byte hash)"
+    )
+    hash: bytes = Field(..., description="Hash of the secret preimage")
+    expiration: Optional[datetime] = Field(
+        default=None,
+        description="Absolute time when the lock expires and tokens are refunded"
+    )
+
+    model_config = {"populate_by_name": True}
+
+    @field_validator('hash_algorithm', mode='before')
+    @classmethod
+    def _coerce_algorithm(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            try:
+                return HashAlgorithm[v.strip().upper()]
+            except KeyError:
+                raise ValueError(f"unknown hash algorithm: {v!r}") from None
+        return v
+
+    @field_validator('hash', mode='before')
+    @classmethod
+    def _coerce_hash(cls, v: Any) -> Any:
+        return bytes.fromhex(v) if isinstance(v, str) else v
+
+    def validate_for_submit(self) -> None:
+        """Raise ValueError if the node would reject this lock outright.
+
+        Mirrors the node's checks: known algorithm, hash length for the
+        algorithm, and an expiration between 10 minutes and 30 days away.
+        """
+        want = {HashAlgorithm.SHA256: 32, HashAlgorithm.SHA256D: 32, HashAlgorithm.HASH160: 20}
+        if self.hash_algorithm not in want:
+            raise ValueError(f"unsupported hash algorithm: {self.hash_algorithm!r}")
+        if len(self.hash) != want[self.hash_algorithm]:
+            raise ValueError(
+                f"hash must be {want[self.hash_algorithm]} bytes for {self.hash_algorithm.name}, got {len(self.hash)}"
+            )
+        if self.expiration is None:
+            raise ValueError("expiration is required")
+        exp = self.expiration if self.expiration.tzinfo else self.expiration.replace(tzinfo=timezone.utc)
+        delta = (exp - datetime.now(timezone.utc)).total_seconds()
+        if delta < 10 * 60:
+            raise ValueError("expiration must be at least 10 minutes in the future")
+        if delta > 30 * 24 * 3600:
+            raise ValueError("expiration must be at most 30 days in the future")
+
+    def to_dict(self) -> Dict[str, Any]:
+        """JSON wire form, as the node emits and accepts it."""
+        out: Dict[str, Any] = {}
+        if self.hash_algorithm:
+            out['hashAlgorithm'] = self.hash_algorithm.name.lower()
+        if self.hash:
+            out['hash'] = self.hash.hex()
+        if self.expiration is not None:
+            exp = self.expiration if self.expiration.tzinfo else self.expiration.replace(tzinfo=timezone.utc)
+            out['expiration'] = exp.astimezone(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+        return out
+
+
 class TransactionHeader(BaseModel):
     """
     Complete transaction header matching Go implementation.
@@ -212,6 +292,7 @@ class TransactionHeader(BaseModel):
             Expire      *ExpireOptions   `json:"expire,omitempty"`
             HoldUntil   *HoldUntilOptions `json:"holdUntil,omitempty"`
             Authorities []*url.URL       `json:"authorities,omitempty"`
+            HashLock    *HashLockOptions `json:"hashLock,omitempty"`   // field 8
         }
     """
     principal: Union[str, AccountUrl] = Field(
@@ -243,6 +324,11 @@ class TransactionHeader(BaseModel):
     authorities: Optional[List[Union[str, AccountUrl]]] = Field(
         default=None,
         description="Additional authorities that must approve the transaction"
+    )
+    hash_lock: Optional[HashLockOptions] = Field(
+        default=None,
+        alias="hashLock",
+        description="Locks the synthetic output until a preimage is revealed or the lock expires"
     )
     # Additional envelope-level fields
     timestamp: Optional[int] = Field(
@@ -324,7 +410,8 @@ class TransactionHeader(BaseModel):
         expire: Optional[ExpireOptions] = None,
         hold_until: Optional[HoldUntilOptions] = None,
         authorities: Optional[List[Union[str, AccountUrl]]] = None,
-        timestamp: Optional[int] = None
+        timestamp: Optional[int] = None,
+        hash_lock: Optional[HashLockOptions] = None
     ) -> TransactionHeader:
         """
         Factory method for creating a TransactionHeader.
@@ -338,6 +425,7 @@ class TransactionHeader(BaseModel):
             hold_until: Hold until options
             authorities: Additional required authorities
             timestamp: Transaction timestamp (nanoseconds)
+            hash_lock: Optional hash-lock (HTLC) condition
 
         Returns:
             Configured TransactionHeader instance
@@ -353,6 +441,7 @@ class TransactionHeader(BaseModel):
             expire=expire,
             hold_until=hold_until,
             authorities=authorities,
+            hash_lock=hash_lock,
             timestamp=timestamp
         )
 
@@ -411,6 +500,10 @@ class TransactionHeader(BaseModel):
                 for auth in self.authorities
             ]
 
+        # HashLock
+        if self.hash_lock is not None:
+            result['hashLock' if by_alias else 'hash_lock'] = self.hash_lock.to_dict()
+
         return result
 
     def with_expire(self, expire: ExpireOptions) -> TransactionHeader:
@@ -423,6 +516,12 @@ class TransactionHeader(BaseModel):
         """Return a copy with new hold_until options."""
         data = self.model_dump(exclude_none=True)
         data['hold_until'] = hold_until
+        return TransactionHeader(**data)
+
+    def with_hash_lock(self, hash_lock: HashLockOptions) -> TransactionHeader:
+        """Return a copy with a hash-lock (HTLC) condition."""
+        data = self.model_dump(exclude_none=True)
+        data['hash_lock'] = hash_lock
         return TransactionHeader(**data)
 
     def with_memo(self, memo: str) -> TransactionHeader:

@@ -397,6 +397,54 @@ transactions:
         description: "Causation hash"
         required: true
 
+  ReleaseLockedOperation:
+    description: "Release a hash-locked deposit by revealing the preimage"
+    fields:
+      - name: "lockedTxID"
+        type: "string"
+        description: "ID of the SyntheticLockedDeposit to release"
+        required: true
+      - name: "preimage"
+        type: "bytes"
+        description: "Secret that hashes to the locked hash"
+        required: true
+
+  SyntheticLockedDeposit:
+    description: "Synthetic deposit of tokens locked by a hash until the preimage is revealed"
+    fields:
+      - name: "token"
+        type: "string"
+        description: "Token URL"
+        required: true
+      - name: "amount"
+        type: "int"
+        description: "Amount locked"
+        required: true
+      - name: "sender"
+        type: "string"
+        description: "Original sender, refunded on expiration"
+        required: true
+      - name: "hashAlgorithm"
+        type: "string"
+        description: "sha256, sha256d or hash160"
+        required: true
+      - name: "hash"
+        type: "bytes"
+        description: "Hash that must be unlocked with the preimage"
+        required: true
+      - name: "expiration"
+        type: "string"
+        description: "When the lock expires"
+        required: false
+      - name: "isIssuer"
+        type: "bool"
+        description: "Sender was the token issuer"
+        required: false
+      - name: "cause"
+        type: "bytes"
+        description: "Causation hash"
+        required: true
+
   SyntheticForwardTransaction:
     description: "Synthetic forward transaction"
     fields:
