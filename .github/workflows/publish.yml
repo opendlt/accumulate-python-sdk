@@ -1,5 +1,16 @@
 name: Publish to PyPI
 
+# Publishes with PyPI "trusted publishing" (OIDC): no API token is stored anywhere.
+#
+# One-time setup on pypi.org -> project "accumulate-sdk-opendlt" -> Publishing -> Add a publisher:
+#   Owner: opendlt   Repository: accumulate-python-sdk   Workflow: publish.yml   Environment: pypi
+#
+# To release: merge the version bump, then push a tag that matches it (v2.5.0 for version 2.5.0).
+#
+# To check the setup without releasing: Actions -> "Publish to PyPI" -> Run workflow. Run it on a
+# version that is already on PyPI and it succeeds as a no-op (skip-existing) when the trust is
+# configured correctly, and fails at the "Publish" step with an explicit error when it is not.
+
 on:
   push:
     tags:
@@ -8,12 +19,11 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
-  build-and-publish:
+  build:
+    name: Build and check
     runs-on: ubuntu-latest
-    environment: pypi  # optional but recommended
     steps:
       - uses: actions/checkout@v4
 
@@ -22,10 +32,41 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Tag must match the package version
+        if: github.ref_type == 'tag'
+        run: |
+          VERSION=$(python -c "import re,pathlib; print(re.search(r'__version__\s*=\s*\"([^\"]+)\"', pathlib.Path('src/accumulate_client/_version.py').read_text()).group(1))")
+          echo "package version: ${VERSION}  tag: ${GITHUB_REF_NAME}"
+          if [ "v${VERSION}" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match package version ${VERSION}"
+            exit 1
+          fi
+
       - name: Build
         run: |
-          python -m pip install -U pip build
+          python -m pip install -U pip build twine
           python -m build
+          twine check dist/*
 
-      - name: Publish to PyPI (Trusted Publisher)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    name: Publish
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write   # only this job may mint the OIDC token PyPI trusts
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI (trusted publisher)
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
